@@ -1,37 +1,110 @@
 # ADR: Multi-Region Strategy
 
-**Status:** Accepted (Future)
+**Status:** Accepted
 **Date:** 2024-09-01
+**Updated:** 2026-01-16
 
 ## Context
 
-For disaster recovery and latency optimization, multi-region deployment may be needed.
+Enterprise deployments require multi-region capability for:
+- Business Continuity Planning (BCP)
+- Disaster Recovery (DR)
+- Latency optimization for global users
+- Regulatory compliance (data sovereignty)
 
 ## Decision
 
-Adopt Active-Passive with GeoDNS:
-- **Primary:** Europe (Contabo Germany)
-- **Secondary:** India (Contabo Mumbai) - Future
-- **Routing:** GeoDNS for latency-based routing
-- **Replication:** Asynchronous with regional read replicas
+**Multi-region is mandatory from day 1** - minimum 2 independent clusters across regions.
+
+### Architecture: Independent Clusters (NOT Stretched)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Multi-Region Architecture                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   Region 1 (Primary)              Region 2 (DR)                     │
+│   ┌─────────────────┐            ┌─────────────────┐                │
+│   │ Independent K8s │◄──────────►│ Independent K8s │                │
+│   │ Cluster         │  WireGuard │ Cluster         │                │
+│   │                 │  or native │                 │                │
+│   │ Full stack      │  peering   │ Full stack      │                │
+│   └─────────────────┘            └─────────────────┘                │
+│          │                              │                           │
+│          └──────────┬───────────────────┘                           │
+│                     ▼                                               │
+│              k8gb (GSLB)                                            │
+│              DNS-based failover                                     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Principles:**
+- Each cluster survives independently during network partition
+- No stretched clusters (avoids split-brain, reduces complexity)
+- Async data replication between regions (eventual consistency)
+- k8gb handles DNS-based global server load balancing
 
 ## Rationale
 
-Active-Passive provides cost-effective DR with acceptable RPO/RTO for MVP. Active-Active is too complex and expensive.
+| Strategy | Complexity | Resilience | Selected |
+|----------|------------|------------|----------|
+| Single region | Low | Poor | ❌ |
+| Stretched cluster | High | Risky (split-brain) | ❌ |
+| **Independent clusters** | Medium | High | ✅ |
 
-| Strategy | Complexity | Cost | Selected |
-|----------|------------|------|----------|
-| Single region | Low | $ | Current |
-| Active-Passive | Medium | $$ | **Future** |
-| Active-Active | High | $$$ | No |
+## Cross-Region Networking Options
+
+| Option | Use Case | Notes |
+|--------|----------|-------|
+| WireGuard mesh | Different providers, secure overlay | Default |
+| Native peering | Same provider (Hetzner vSwitch) | Lower latency |
+
+## Data Replication Strategy
+
+Each data service uses its own replication mechanism:
+
+| Service | Replication Method | RPO |
+|---------|-------------------|-----|
+| CNPG (Postgres) | WAL streaming to standby | Near-zero |
+| MongoDB | CDC via Debezium → Redpanda | Seconds |
+| Redpanda | MirrorMaker2 | Seconds |
+| Dragonfly | REPLICAOF command | Seconds |
+| MinIO | Bucket replication | Minutes |
+| Harbor | Registry replication | Minutes |
+| Vault | ESO PushSecrets to both | Seconds |
+
+## Global Load Balancing
+
+k8gb provides:
+- Health-based DNS routing
+- Automatic failover when region is unhealthy
+- Geo-based routing (optional)
+- Integration with ExternalDNS
+
+## Region Options
+
+| Provider | Available Regions |
+|----------|------------------|
+| Hetzner Cloud | eu-central (Falkenstein), eu-west (Helsinki), us-east (Ashburn) |
+| Huawei Cloud | eu-west (Paris), ap-southeast (Singapore), etc. |
+| OCI | eu-frankfurt, eu-amsterdam, us-phoenix, etc. |
 
 ## Consequences
 
-**Positive:** DR capability, improved ME latency, regional compliance
-**Negative:** Increased cost, replication lag, split-brain risk
+**Positive:**
+- True disaster recovery capability
+- Each region survives independently
+- No split-brain scenarios
+- Flexibility in provider selection
 
-## Implementation Phases
+**Negative:**
+- Increased infrastructure cost (2x clusters)
+- Cross-region latency for data sync
+- Operational complexity (manage 2 clusters)
+- Eventual consistency trade-offs
 
-1. Current: Single region (Europe)
-2. Future: Add India as hot standby
-3. Future: GeoDNS for automatic routing
+## Related
+
+- [SPEC-DNS-FAILOVER](../specs/SPEC-DNS-FAILOVER.md)
+- [ADR-BOOTSTRAP-ARCHITECTURE](https://github.com/openova-io/bootstrap/docs/ADR-BOOTSTRAP-ARCHITECTURE.md)
