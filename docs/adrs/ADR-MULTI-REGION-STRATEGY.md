@@ -14,31 +14,30 @@ Enterprise deployments require multi-region capability for:
 
 ## Decision
 
-**Multi-region is mandatory from day 1** - minimum 2 independent clusters across regions.
+**Multi-region is strongly recommended** - 2 independent clusters across regions provides true disaster recovery. Single-region deployments are supported but lack BCP/DR capability.
 
 ### Architecture: Independent Clusters (NOT Stretched)
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     Multi-Region Architecture                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   Region 1 (Primary)              Region 2 (DR)                     │
-│   ┌─────────────────┐            ┌─────────────────┐                │
-│   │ Independent K8s │◄──────────►│ Independent K8s │                │
-│   │ Cluster         │  WireGuard │ Cluster         │                │
-│   │                 │  or native │                 │                │
-│   │ Full stack      │  peering   │ Full stack      │                │
-│   │ + Gitea         │            │ + Gitea         │                │
-│   └─────────────────┘            └─────────────────┘                │
-│          │                              │                           │
-│          └──────────┬───────────────────┘                           │
-│                     ▼                                               │
-│              k8gb (Authoritative DNS)                               │
-│              + External DNS Witnesses                               │
-│              (Split-brain protection)                               │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Region1["Region 1 (Primary)"]
+        K8s1[Independent K8s Cluster]
+        Stack1[Full Stack + Gitea]
+    end
+
+    subgraph Region2["Region 2 (DR)"]
+        K8s2[Independent K8s Cluster]
+        Stack2[Full Stack + Gitea]
+    end
+
+    subgraph GSLB["Global Load Balancing"]
+        k8gb[k8gb Authoritative DNS]
+        Witnesses[External DNS Witnesses<br/>Split-brain Protection]
+    end
+
+    K8s1 <-->|"WireGuard or<br/>Native Peering"| K8s2
+    K8s1 --> k8gb
+    K8s2 --> k8gb
 ```
 
 **Key Principles:**
