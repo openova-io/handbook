@@ -2,146 +2,211 @@
 
 ## Overview
 
-Kubernetes manifests for the DNS-based failover system.
+Kubernetes manifests for the DNS-based failover system using k8gb and Failover Controller.
 
-## Health Orchestrator Deployment
+## k8gb Deployment
 
 ```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: dns-failover
+  name: k8gb
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: k8gb
+  namespace: k8gb
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: k8gb
+      version: "0.12.x"
+      sourceRef:
+        kind: HelmRepository
+        name: k8gb
+        namespace: flux-system
+  values:
+    k8gb:
+      dnsZone: "gslb.<domain>"
+      edgeDNSZone: "<domain>"
+      edgeDNSServers:
+        - "8.8.8.8"
+        - "1.1.1.1"
+      clusterGeoTag: "<region>"
+      extGslbClustersGeoTags: "<other-region>"
+      reconcileRequeueSeconds: 30
+```
+
+## Gslb Custom Resource
+
+```yaml
+apiVersion: k8gb.absa.oss/v1beta1
+kind: Gslb
+metadata:
+  name: <tenant>-app
+  namespace: <tenant>-prod
+spec:
+  ingress:
+    ingressClassName: cilium
+    rules:
+      - host: app.gslb.<domain>
+        http:
+          paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: app-service
+                  port:
+                    number: 80
+  strategy:
+    type: roundRobin
+    splitBrainThresholdSeconds: 300
+    dnsTtlSeconds: 30
+```
+
+## Failover Controller Deployment
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: failover-controller
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: health-orchestrator
-  namespace: dns-failover
+  name: failover-controller
+  namespace: failover-controller
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: health-orchestrator
+  name: failover-controller
 rules:
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters"]
+    verbs: ["get", "list", "watch", "patch"]
   - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "patch", "update"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["list", "watch"]
+    resources: ["events"]
+    verbs: ["create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: health-orchestrator
+  name: failover-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: health-orchestrator
+  name: failover-controller
 subjects:
   - kind: ServiceAccount
-    name: health-orchestrator
-    namespace: dns-failover
+    name: failover-controller
+    namespace: failover-controller
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: health-orchestrator-config
-  namespace: dns-failover
+  name: failover-controller-config
+  namespace: failover-controller
 data:
   config.yaml: |
-    nodes:
-      - name: node-1
-        ip: "${NODE_1_IP}"
-        health_endpoint: "http://${NODE_1_IP}:15021/healthz/ready"
-      - name: node-2
-        ip: "${NODE_2_IP}"
-        health_endpoint: "http://${NODE_2_IP}:15021/healthz/ready"
-      - name: node-3
-        ip: "${NODE_3_IP}"
-        health_endpoint: "http://${NODE_3_IP}:15021/healthz/ready"
+    witnesses:
+      externalDNS:
+        resolvers:
+          - 8.8.8.8
+          - 1.1.1.1
+          - 9.9.9.9
+        targetHostname: region-1.gslb.<domain>
+        queryTimeout: 10s
+        quorum: 2
 
-    tenants:
-      - name: <tenant>
-        domains:
-          - api.<tenant>.io
-          - app.<tenant>.io
-        hosts_key: "<tenant>.hosts"
+    healthCheck:
+      interval: 10s
+      failureThreshold: 3
 
-    health_check:
-      interval_seconds: 5
-      timeout_seconds: 2
-      failure_threshold: 2
-      success_threshold: 1
-
-    coredns:
-      configmap_name: "coredns-custom"
-      configmap_namespace: "kube-system"
+    services:
+      - name: cnpg
+        namespace: databases
+        type: cnpg
+        promotionAction: pg_promote
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: health-orchestrator
-  namespace: dns-failover
+  name: failover-controller
+  namespace: failover-controller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: health-orchestrator
+      app: failover-controller
   template:
     metadata:
       labels:
-        app: health-orchestrator
+        app: failover-controller
     spec:
-      serviceAccountName: health-orchestrator
+      serviceAccountName: failover-controller
       containers:
-        - name: health-orchestrator
-          image: ghcr.io/openova-io/health-orchestrator:latest
+        - name: failover-controller
+          image: ghcr.io/openova-io/failover-controller:latest
           ports:
             - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: metrics
           resources:
             requests:
-              memory: "16Mi"
+              memory: "32Mi"
               cpu: "10m"
             limits:
-              memory: "32Mi"
+              memory: "64Mi"
               cpu: "100m"
-          env:
-            - name: RUST_LOG
-              value: "info"
           volumeMounts:
             - name: config
-              mountPath: /etc/health-orchestrator
+              mountPath: /etc/failover-controller
           livenessProbe:
             httpGet:
-              path: /health
+              path: /healthz
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /health
+              path: /readyz
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 5
       volumes:
         - name: config
           configMap:
-            name: health-orchestrator-config
+            name: failover-controller-config
 ```
 
-## CoreDNS Custom Configuration
+## FailoverConfig Custom Resource
 
 ```yaml
-apiVersion: v1
-kind: ConfigMap
+apiVersion: failover.openova.io/v1alpha1
+kind: FailoverConfig
 metadata:
-  name: coredns-custom
-  namespace: kube-system
-data:
-  <tenant>.hosts: |
-    # Managed by Health Orchestrator
-    # Updated dynamically
+  name: split-brain-protection
+  namespace: failover-controller
+spec:
+  witnesses:
+    externalDNS:
+      resolvers:
+        - 8.8.8.8
+        - 1.1.1.1
+        - 9.9.9.9
+      targetHostname: region-1.gslb.<domain>
+      queryTimeout: 10s
+      quorum: 2
+
+  healthCheck:
+    interval: 10s
+    failureThreshold: 3
 ```
 
 ## Alert Rules
@@ -154,26 +219,53 @@ metadata:
   namespace: monitoring
 spec:
   groups:
-    - name: dns-failover
+    - name: k8gb
       rules:
-        - alert: LowHealthyNodes
-          expr: health_orchestrator_healthy_nodes < 2
+        - alert: GslbEndpointDown
+          expr: k8gb_gslb_healthy_records < 2
           for: 1m
           labels:
             severity: warning
           annotations:
-            summary: "Only {{ $value }} healthy nodes"
+            summary: "Only {{ $value }} healthy GSLB endpoints"
 
-        - alert: AllNodesDown
-          expr: health_orchestrator_healthy_nodes == 0
+        - alert: GslbAllEndpointsDown
+          expr: k8gb_gslb_healthy_records == 0
           for: 30s
           labels:
             severity: critical
           annotations:
-            summary: "No healthy nodes available"
+            summary: "No healthy GSLB endpoints available"
+
+    - name: failover-controller
+      rules:
+        - alert: SplitBrainWitnessUnreachable
+          expr: splitbrain_witness_reachable == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "External DNS witness {{ $labels.resolver }} unreachable"
+
+        - alert: SplitBrainAllWitnessesUnreachable
+          expr: sum(splitbrain_witness_reachable) == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "All external DNS witnesses unreachable"
+
+        - alert: FailoverTriggered
+          expr: increase(splitbrain_promotions_total[5m]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Failover was triggered for {{ $labels.service }}"
 ```
 
 ## Related
 
 - [SPEC-DNS-FAILOVER](../specs/SPEC-DNS-FAILOVER.md)
+- [SPEC-SPLIT-BRAIN-PROTECTION](../specs/SPEC-SPLIT-BRAIN-PROTECTION.md)
+- [ADR-FAILOVER-CONTROLLER](../../failover-controller/docs/ADR-FAILOVER-CONTROLLER.md)
 - [RUNBOOK-DNS-FAILOVER](../runbooks/RUNBOOK-DNS-FAILOVER.md)

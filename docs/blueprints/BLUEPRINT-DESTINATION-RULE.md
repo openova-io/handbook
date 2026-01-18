@@ -1,89 +1,126 @@
-# BLUEPRINT: Istio DestinationRule
+# BLUEPRINT: Cilium Circuit Breaker (CiliumEnvoyConfig)
 
 ## Overview
 
-Circuit breaker and load balancing configuration for Istio service mesh.
+Circuit breaker and load balancing configuration for Cilium Service Mesh using CiliumEnvoyConfig.
 
-## Standard DestinationRule
+## Standard Circuit Breaker
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
-kind: DestinationRule
+apiVersion: cilium.io/v2
+kind: CiliumEnvoyConfig
 metadata:
-  name: <service>-destination
+  name: <service>-circuit-breaker
   namespace: <tenant>-prod
 spec:
-  host: <service>.<tenant>-prod.svc.cluster.local
-  trafficPolicy:
-    connectionPool:
-      tcp:
-        maxConnections: 100
-        connectTimeout: 5s
-      http:
-        h2UpgradePolicy: UPGRADE
-        http1MaxPendingRequests: 100
-        http2MaxRequests: 1000
-        maxRequestsPerConnection: 100
-        maxRetries: 3
-    outlierDetection:
-      consecutive5xxErrors: 5
-      interval: 10s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
-      minHealthPercent: 30
-    loadBalancer:
-      simple: LEAST_REQUEST
+  services:
+    - name: <service>
+      namespace: <tenant>-prod
+  resources:
+    - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+      name: <service>
+      connect_timeout: 5s
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 100
+            max_pending_requests: 100
+            max_requests: 1000
+            max_retries: 3
+      outlier_detection:
+        consecutive_5xx: 5
+        interval: 10s
+        base_ejection_time: 30s
+        max_ejection_percent: 50
 ```
 
 ## Critical Service (Database Proxy)
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
-kind: DestinationRule
+apiVersion: cilium.io/v2
+kind: CiliumEnvoyConfig
 metadata:
-  name: <tenant>-db-proxy
+  name: <tenant>-db-proxy-circuit-breaker
   namespace: <tenant>-prod
 spec:
-  host: <tenant>-db-proxy.<tenant>-prod.svc.cluster.local
-  trafficPolicy:
-    connectionPool:
-      tcp:
-        maxConnections: 50
-        connectTimeout: 3s
-      http:
-        http1MaxPendingRequests: 50
-        maxRetries: 2
-    outlierDetection:
-      consecutive5xxErrors: 3
-      interval: 5s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
-      minHealthPercent: 50
+  services:
+    - name: <tenant>-db-proxy
+      namespace: <tenant>-prod
+  resources:
+    - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+      name: <tenant>-db-proxy
+      connect_timeout: 3s
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 50
+            max_pending_requests: 50
+            max_retries: 2
+      outlier_detection:
+        consecutive_5xx: 3
+        interval: 5s
+        base_ejection_time: 30s
+        max_ejection_percent: 50
 ```
 
 ## Background Service (Workers)
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
-kind: DestinationRule
+apiVersion: cilium.io/v2
+kind: CiliumEnvoyConfig
 metadata:
-  name: <tenant>-worker
+  name: <tenant>-worker-circuit-breaker
   namespace: <tenant>-prod
 spec:
-  host: <tenant>-worker.<tenant>-prod.svc.cluster.local
-  trafficPolicy:
-    connectionPool:
-      tcp:
-        maxConnections: 200
-        connectTimeout: 10s
-      http:
-        http1MaxPendingRequests: 200
-        maxRetries: 5
-    outlierDetection:
-      consecutive5xxErrors: 10
-      interval: 30s
-      baseEjectionTime: 60s
-      maxEjectionPercent: 75
+  services:
+    - name: <tenant>-worker
+      namespace: <tenant>-prod
+  resources:
+    - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+      name: <tenant>-worker
+      connect_timeout: 10s
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 200
+            max_pending_requests: 200
+            max_retries: 5
+      outlier_detection:
+        consecutive_5xx: 10
+        interval: 30s
+        base_ejection_time: 60s
+        max_ejection_percent: 75
+```
+
+## HTTPRoute with Retries (Gateway API)
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: <service>-route
+  namespace: <tenant>-prod
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: cilium-gateway
+  hostnames:
+    - "app.<domain>"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: <service>
+          port: 80
+      timeouts:
+        request: 30s
+      retry:
+        attempts: 3
+        backoff:
+          initialInterval: 100ms
+          maxInterval: 10s
 ```
 
 ## Tier Configuration Reference
@@ -94,7 +131,17 @@ spec:
 | Standard | 5 | 30s | 50% |
 | Background | 10 | 60s | 75% |
 
+## Migration from Istio DestinationRule
+
+| Istio Concept | Cilium Equivalent |
+|---------------|-------------------|
+| DestinationRule | CiliumEnvoyConfig |
+| VirtualService | HTTPRoute (Gateway API) |
+| outlierDetection | outlier_detection in Cluster config |
+| connectionPool | circuit_breakers in Cluster config |
+
 ## Related
 
 - [SPEC-CIRCUIT-BREAKER](../specs/SPEC-CIRCUIT-BREAKER.md)
 - [ADR-OPERATIONAL-RESILIENCE](../adrs/ADR-OPERATIONAL-RESILIENCE.md)
+- [ADR-CILIUM-SERVICE-MESH](../../cilium/docs/ADR-CILIUM-SERVICE-MESH.md)

@@ -63,8 +63,9 @@ Each infrastructure component has its own repository with dedicated documentatio
 |-----------|------------|-------------|
 | Terraform | [terraform](https://github.com/openova-io/terraform) | ADR-014 |
 | Flux | [flux](https://github.com/openova-io/flux) | ADR-016 |
-| Istio | [istio](https://github.com/openova-io/istio) | ADR-008 |
-| Cilium | [cilium](https://github.com/openova-io/cilium) | ADR-025 |
+| Cilium | [cilium](https://github.com/openova-io/cilium) | ADR-025, ADR-CILIUM-SERVICE-MESH |
+| Gitea | [gitea](https://github.com/openova-io/gitea) | ADR-GITEA |
+| k8gb | [k8gb](https://github.com/openova-io/k8gb) | ADR-K8GB-GSLB |
 | Grafana | [grafana](https://github.com/openova-io/grafana) | ADR-020, ADR-024, ADR-028, ADR-029 |
 | External Secrets | [external-secrets](https://github.com/openova-io/external-secrets) | ADR-013, ADR-039 |
 | Kyverno | [kyverno](https://github.com/openova-io/kyverno) | ADR-031, ADR-032 |
@@ -80,4 +81,4 @@ Each infrastructure component has its own repository with dedicated documentatio
 
 ---
 
-*Part of [OpenOva](https://github.com/openova-io)*
+*Part of [OpenOva](https://openova.io)*

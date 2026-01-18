@@ -18,8 +18,9 @@ openova-io/
 ├── handbook/           # Central documentation
 ├── terraform/          # Infrastructure as Code
 ├── flux/               # GitOps configuration
-├── istio/              # Service mesh
-├── cilium/             # CNI
+├── cilium/             # CNI + Service Mesh
+├── gitea/              # Self-hosted Git
+├── k8gb/               # Global Server Load Balancing
 ├── grafana/            # Observability
 ├── external-secrets/   # Secrets management
 ├── kyverno/            # Policy engine

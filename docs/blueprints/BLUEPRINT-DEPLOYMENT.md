@@ -8,30 +8,30 @@ Multi-node K3s cluster deployment on Contabo VPS.
 
 ```mermaid
 flowchart TB
-    subgraph dns["DNS Failover"]
-        health["Health Orchestrator"]
-        coredns["CoreDNS"]
+    subgraph dns["DNS Failover (k8gb)"]
+        health["Health Checks"]
+        coredns["k8gb CoreDNS"]
     end
 
     subgraph cluster["K3s Cluster"]
         subgraph node1["Node 1 - VPS 10"]
             cp1["K3s Server + etcd"]
-            istio1["Istio Gateway (ACTIVE)"]
+            gw1["Gateway (Cilium)"]
         end
 
         subgraph node2["Node 2 - VPS 10"]
             cp2["K3s Server + etcd"]
-            istio2["Istio Gateway (ACTIVE)"]
+            gw2["Gateway (Cilium)"]
         end
 
         subgraph node3["Node 3 - VPS 10"]
             cp3["K3s Server + etcd"]
-            istio3["Istio Gateway (ACTIVE)"]
+            gw3["Gateway (Cilium)"]
         end
     end
 
     health --> node1 & node2 & node3
-    coredns --> istio1 & istio2 & istio3
+    coredns --> gw1 & gw2 & gw3
 ```
 
 ## K3s Installation
@@ -69,7 +69,7 @@ curl -sfL https://get.k3s.io | K3S_URL=https://<first-node-ip>:6443 \
   --kubelet-arg="max-pods=50"
 ```
 
-### Install Cilium CNI
+### Install Cilium CNI + Service Mesh
 
 ```bash
 helm repo add cilium https://helm.cilium.io/
@@ -80,7 +80,12 @@ helm install cilium cilium/cilium \
   --set k8sServicePort=6443 \
   --set hubble.enabled=true \
   --set hubble.relay.enabled=true \
-  --set hubble.ui.enabled=true
+  --set hubble.ui.enabled=true \
+  --set encryption.enabled=true \
+  --set encryption.type=wireguard \
+  --set gatewayAPI.enabled=true \
+  --set envoy.enabled=true \
+  --set loadBalancer.l7.backend=envoy
 ```
 
 ## Resource Allocation
@@ -96,8 +101,8 @@ helm install cilium cilium/cilium \
 
 | Component | Replacement |
 |-----------|-------------|
-| traefik | Istio Ingress Gateway |
-| servicelb | DNS-based failover |
+| traefik | Gateway API (Cilium) |
+| servicelb | DNS-based failover (k8gb) |
 | local-storage | Application-level replication |
 | flannel | Cilium CNI |
 | network-policy | Cilium policies |

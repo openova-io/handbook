@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2024-09-01
-**Updated:** 2026-01-16
+**Updated:** 2026-01-17
 
 ## Context
 
@@ -14,95 +14,110 @@ Services require resilience patterns to:
 
 ## Decision
 
-Implement resilience at the **service mesh level** using Istio with user-selectable modes.
+Implement resilience at the **Cilium Service Mesh level** using eBPF-based networking and Envoy L7 proxy.
 
-## Istio Mode Options
-
-| Mode | L4 mTLS | L7 Traffic | OTel Traces | Resource Usage |
-|------|---------|------------|-------------|----------------|
-| **Ambient** | ✅ ztunnel | ❌ | ⚠️ Limited | Low |
-| **Ambient + Waypoint** | ✅ ztunnel | ✅ Waypoint | ✅ Full | Medium |
-| **Sidecar** | ✅ Envoy | ✅ Envoy | ✅ Full | High |
-
-### Mode Selection Guide
-
-```mermaid
-flowchart TD
-    Start[Start] --> Q1{Need L7 traffic management?}
-    Q1 -->|No| Ambient[Ambient Mode]
-    Q1 -->|Yes| Q2{Need per-pod observability?}
-    Q2 -->|No| Waypoint[Ambient + Waypoint]
-    Q2 -->|Yes| Sidecar[Sidecar Mode]
-
-    Ambient -->|"Basic mTLS, low overhead"| Done[Deploy]
-    Waypoint -->|"L7 + shared proxy"| Done
-    Sidecar -->|"Full features, per-pod"| Done
-```
-
-### Recommendation by Use Case
-
-| Use Case | Recommended Mode |
-|----------|------------------|
-| Cost-sensitive, basic security | Ambient |
-| Balanced L7 + observability | Ambient + Waypoint |
-| Full observability, legacy apps | Sidecar |
-| Heavy OTel/tracing requirements | Sidecar or Ambient + Waypoint |
-
-## Resilience Features
-
-Implemented via Istio regardless of mode:
+## Architecture
 
 ```mermaid
 flowchart LR
-    Client --> Istio
-    subgraph Istio["Istio Resilience"]
+    Client --> Cilium
+    subgraph Cilium["Cilium Service Mesh"]
+        eBPF[eBPF L3/L4]
+        Envoy[Envoy L7]
         CB[Circuit Breaker]
         RT[Retries]
         TO[Timeouts]
         LB[Load Balancing]
     end
-    Istio --> Service
+    Cilium --> Service
 ```
 
-### Circuit Breaker (DestinationRule)
+## Resilience Features
+
+Cilium provides resilience via CiliumEnvoyConfig and HTTPRoute:
+
+### Circuit Breaker (CiliumEnvoyConfig)
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
-kind: DestinationRule
+apiVersion: cilium.io/v2
+kind: CiliumEnvoyConfig
 metadata:
   name: service-circuit-breaker
+  namespace: default
 spec:
-  host: my-service
-  trafficPolicy:
-    connectionPool:
-      tcp:
-        maxConnections: 100
-      http:
-        h2UpgradePolicy: UPGRADE
-        http1MaxPendingRequests: 100
-        http2MaxRequests: 1000
-    outlierDetection:
-      consecutive5xxErrors: 5
-      interval: 30s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 50
+  services:
+    - name: my-service
+      namespace: default
+  resources:
+    - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+      name: my-service
+      connect_timeout: 5s
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 100
+            max_pending_requests: 100
+            max_requests: 1000
+            max_retries: 3
+      outlier_detection:
+        consecutive_5xx: 5
+        interval: 30s
+        base_ejection_time: 30s
+        max_ejection_percent: 50
 ```
 
-### Retries (VirtualService)
+### Retries (HTTPRoute)
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
-  name: service-retry
+  name: service-route
 spec:
-  hosts:
-    - my-service
-  http:
-    - retries:
+  parentRefs:
+    - name: cilium-gateway
+  hostnames:
+    - "app.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: my-service
+          port: 80
+      timeouts:
+        request: 10s
+      retry:
         attempts: 3
-        perTryTimeout: 2s
-        retryOn: 5xx,reset,connect-failure
+        backoff:
+          initialInterval: 100ms
+          maxInterval: 10s
+```
+
+### Timeouts (CiliumEnvoyConfig)
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumEnvoyConfig
+metadata:
+  name: service-timeouts
+spec:
+  services:
+    - name: my-service
+      namespace: default
+  resources:
+    - "@type": type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+      name: my-service-routes
+      virtual_hosts:
+        - name: my-service
+          domains: ["*"]
+          routes:
+            - match:
+                prefix: "/"
+              route:
+                cluster: my-service
+                timeout: 30s
 ```
 
 ## Observability Integration
@@ -114,8 +129,13 @@ flowchart TB
         A2[Service B]
     end
 
-    subgraph Istio["Istio (any mode)"]
-        Proxy[Proxy/ztunnel]
+    subgraph Cilium["Cilium Service Mesh"]
+        eBPF[eBPF + Envoy]
+        Hubble[Hubble]
+    end
+
+    subgraph OTel["OpenTelemetry"]
+        AutoInst[Auto-Instrumentation]
     end
 
     subgraph Observability["Grafana Stack"]
@@ -126,9 +146,11 @@ flowchart TB
         Grafana[Grafana]
     end
 
-    Apps --> Proxy
-    Proxy -->|"Metrics"| Alloy
-    Proxy -->|"Traces"| Alloy
+    Apps --> eBPF
+    eBPF --> Hubble
+    Apps --> AutoInst
+    Hubble -->|"Metrics, Flows"| Alloy
+    AutoInst -->|"Traces"| Alloy
     Apps -->|"Logs"| Alloy
     Alloy --> Tempo
     Alloy --> Mimir
@@ -137,6 +159,37 @@ flowchart TB
     Mimir --> Grafana
     Loki --> Grafana
 ```
+
+### Key Finding: OpenTelemetry Independence
+
+**Important:** OpenTelemetry auto-instrumentation works **independently** of the service mesh. This means:
+- Full distributed tracing without sidecar proxies
+- OTel operator injects auto-instrumentation into pods
+- Traces flow directly from apps to Tempo via Alloy
+- Cilium provides network observability via Hubble
+
+## Cilium Resilience Features
+
+| Feature | Implementation | Configuration |
+|---------|---------------|---------------|
+| mTLS | WireGuard encryption | `encryption.type: wireguard` |
+| Circuit Breaker | CiliumEnvoyConfig | Outlier detection |
+| Retries | HTTPRoute | Gateway API |
+| Timeouts | CiliumEnvoyConfig | Route configuration |
+| Load Balancing | eBPF | Built-in |
+| Rate Limiting | CiliumEnvoyConfig | Rate limit service |
+
+## Comparison: Cilium vs Istio
+
+| Feature | Cilium | Istio Sidecar | Istio Ambient |
+|---------|--------|---------------|---------------|
+| mTLS | eBPF/WireGuard | Envoy | ztunnel |
+| L7 Policies | CiliumEnvoyConfig | VirtualService | Waypoint |
+| Resource Usage | Low | High | Medium |
+| Complexity | Lower | Higher | Medium |
+| OTel Support | Via OTel Operator | Built-in | Limited |
+
+**Selected: Cilium** - Unified CNI + mesh with lower complexity.
 
 ## SLO-Based Alerting
 
@@ -152,16 +205,16 @@ Grafana dashboards include SLO monitoring:
 
 **Positive:**
 - Language-agnostic resilience (no code changes)
-- Centralized policy management
-- Integrated with observability stack
-- Mode flexibility based on requirements
+- Centralized policy management via CiliumEnvoyConfig
+- Integrated with Grafana observability stack
+- OTel tracing works independently of mesh
+- Unified CNI + mesh reduces operational complexity
 
 **Negative:**
-- Istio operational complexity
-- Mode selection requires understanding trade-offs
-- Sidecar mode increases resource usage
+- CiliumEnvoyConfig requires Envoy configuration knowledge
+- Some features require Gateway API (newer standard)
 
 ## Related
 
+- [ADR-CILIUM-SERVICE-MESH](../../cilium/docs/ADR-CILIUM-SERVICE-MESH.md)
 - [SPEC-CIRCUIT-BREAKER](../specs/SPEC-CIRCUIT-BREAKER.md)
-- [BLUEPRINT-DESTINATION-RULE](../blueprints/BLUEPRINT-DESTINATION-RULE.md)

@@ -10,7 +10,7 @@ Standard namespace structure for OpenOva platform deployments.
 |-----------|---------|-------|
 | `kube-system` | Kubernetes system | Platform |
 | `flux-system` | GitOps controllers | Platform |
-| `istio-system` | Service mesh | Platform |
+| `cilium-gateway` | Cilium Gateway and Service Mesh | Platform |
 | `monitoring` | Observability stack | Platform |
 | `platform-services` | Shared platform services | Platform |
 | `databases` | Database operators | Platform |
@@ -31,7 +31,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: istio-system
+  name: cilium-gateway
   labels:
     app.kubernetes.io/part-of: openova
     openova.io/component: mesh
@@ -43,7 +43,6 @@ metadata:
   labels:
     app.kubernetes.io/part-of: openova
     openova.io/component: observability
-    istio.io/dataplane-mode: ambient
 ---
 apiVersion: v1
 kind: Namespace
@@ -52,7 +51,6 @@ metadata:
   labels:
     app.kubernetes.io/part-of: openova
     openova.io/component: platform
-    istio.io/dataplane-mode: ambient
 ---
 apiVersion: v1
 kind: Namespace
@@ -61,7 +59,6 @@ metadata:
   labels:
     app.kubernetes.io/part-of: openova
     openova.io/component: data
-    istio.io/dataplane-mode: ambient
 ```
 
 ## Tenant Namespace Template
@@ -76,7 +73,6 @@ metadata:
     app.kubernetes.io/part-of: <tenant>
     openova.io/tenant: <tenant>
     openova.io/environment: production
-    istio.io/dataplane-mode: ambient
 ---
 apiVersion: v1
 kind: Namespace
@@ -86,7 +82,6 @@ metadata:
     app.kubernetes.io/part-of: <tenant>
     openova.io/tenant: <tenant>
     openova.io/environment: staging
-    istio.io/dataplane-mode: ambient
 ```
 
 ## Resource Quotas

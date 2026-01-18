@@ -12,7 +12,7 @@ kind: Namespace
 metadata:
   name: platform-services
   labels:
-    istio.io/dataplane-mode: ambient
+    app.kubernetes.io/part-of: openova
 ---
 apiVersion: v1
 kind: ConfigMap

@@ -2,7 +2,7 @@
 
 Central index of all documentation across OpenOva repositories.
 
-**Updated:** 2026-01-16
+**Updated:** 2026-01-17
 
 ---
 
@@ -20,7 +20,7 @@ Central index of all documentation across OpenOva repositories.
 
 **Repository:** [bootstrap](https://github.com/openova-io/bootstrap)
 
-Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure from OpenOva blueprints.
+Managed UI for bootstrapping organization-specific Kubernetes infrastructure from OpenOva blueprints.
 
 | Document | Description |
 |----------|-------------|
@@ -41,7 +41,7 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 | [ADR-MICROSERVICES-ARCHITECTURE](./docs/adrs/ADR-MICROSERVICES-ARCHITECTURE.md) | Microservices architecture decisions |
 | [ADR-IMAGE-REGISTRY](./docs/adrs/ADR-IMAGE-REGISTRY.md) | Harbor container registry (mandatory) |
 | [ADR-SECURITY-SCANNING](./docs/adrs/ADR-SECURITY-SCANNING.md) | Trivy CI/CD + Harbor + Runtime scanning |
-| [ADR-OPERATIONAL-RESILIENCE](./docs/adrs/ADR-OPERATIONAL-RESILIENCE.md) | Istio resilience patterns |
+| [ADR-OPERATIONAL-RESILIENCE](./docs/adrs/ADR-OPERATIONAL-RESILIENCE.md) | Cilium resilience patterns |
 | [ADR-PROGRESSIVE-DELIVERY](./docs/adrs/ADR-PROGRESSIVE-DELIVERY.md) | Progressive delivery strategy |
 | [ADR-MULTI-REGION-STRATEGY](./docs/adrs/ADR-MULTI-REGION-STRATEGY.md) | Multi-region independent clusters |
 | [ADR-ZERO-HUMAN-INTERVENTION-OPS](./docs/adrs/ADR-ZERO-HUMAN-INTERVENTION-OPS.md) | Zero human intervention operations |
@@ -55,8 +55,9 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 |----------|-------------|
 | [SPEC-PLATFORM-TECH-STACK](./docs/specs/SPEC-PLATFORM-TECH-STACK.md) | Complete platform technology stack |
 | [SPEC-DNS-FAILOVER](./docs/specs/SPEC-DNS-FAILOVER.md) | k8gb + ExternalDNS configuration |
+| [SPEC-SPLIT-BRAIN-PROTECTION](./docs/specs/SPEC-SPLIT-BRAIN-PROTECTION.md) | External DNS witness design |
 | [SPEC-LLM-GATEWAY](./docs/specs/SPEC-LLM-GATEWAY.md) | LLM Gateway specification |
-| [SPEC-CIRCUIT-BREAKER](./docs/specs/SPEC-CIRCUIT-BREAKER.md) | Circuit breaker patterns |
+| [SPEC-CIRCUIT-BREAKER](./docs/specs/SPEC-CIRCUIT-BREAKER.md) | Cilium circuit breaker patterns |
 | [SPEC-AUTO-REMEDIATION](./docs/specs/SPEC-AUTO-REMEDIATION.md) | Auto-remediation workflows |
 
 ### Blueprints (Deployable Configurations)
@@ -65,7 +66,6 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 |----------|-------------|
 | [BLUEPRINT-NAMESPACE](./docs/blueprints/BLUEPRINT-NAMESPACE.md) | Namespace configuration |
 | [BLUEPRINT-DEPLOYMENT](./docs/blueprints/BLUEPRINT-DEPLOYMENT.md) | Deployment templates |
-| [BLUEPRINT-DESTINATION-RULE](./docs/blueprints/BLUEPRINT-DESTINATION-RULE.md) | Istio destination rules |
 | [BLUEPRINT-DNS-FAILOVER](./docs/blueprints/BLUEPRINT-DNS-FAILOVER.md) | DNS failover setup |
 | [BLUEPRINT-LLM-GATEWAY](./docs/blueprints/BLUEPRINT-LLM-GATEWAY.md) | LLM Gateway deployment |
 
@@ -96,7 +96,7 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 ---
 
-### GitOps & IDP
+### GitOps, Git & IDP
 
 #### Flux
 **Repository:** [flux](https://github.com/openova-io/flux)
@@ -104,6 +104,12 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 |----------|------|-------------|
 | [ADR-FLUX-GITOPS](https://github.com/openova-io/flux/blob/main/docs/ADR-FLUX-GITOPS.md) | ADR | Flux GitOps decision |
 | [SPEC-FLUX-STRUCTURE](https://github.com/openova-io/flux/blob/main/docs/SPEC-FLUX-STRUCTURE.md) | SPEC | Flux directory structure |
+
+#### Gitea
+**Repository:** [gitea](https://github.com/openova-io/gitea)
+| Document | Type | Description |
+|----------|------|-------------|
+| [ADR-GITEA](https://github.com/openova-io/gitea/blob/main/docs/ADR-GITEA.md) | ADR | Gitea as internal Git provider |
 
 #### Backstage
 **Repository:** [backstage](https://github.com/openova-io/backstage)
@@ -113,19 +119,14 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 ---
 
-### Networking
-
-#### Istio
-**Repository:** [istio](https://github.com/openova-io/istio)
-| Document | Type | Description |
-|----------|------|-------------|
-| [ADR-ISTIO-SERVICE-MESH](https://github.com/openova-io/istio/blob/main/docs/ADR-ISTIO-SERVICE-MESH.md) | ADR | Istio service mesh (modes: Ambient/Waypoint/Sidecar) |
+### Networking & Service Mesh
 
 #### Cilium
 **Repository:** [cilium](https://github.com/openova-io/cilium)
 | Document | Type | Description |
 |----------|------|-------------|
 | [ADR-CNI-CILIUM-EBPF](https://github.com/openova-io/cilium/blob/main/docs/ADR-CNI-CILIUM-EBPF.md) | ADR | Cilium CNI with eBPF |
+| [ADR-CILIUM-SERVICE-MESH](https://github.com/openova-io/cilium/blob/main/docs/ADR-CILIUM-SERVICE-MESH.md) | ADR | Cilium Service Mesh (replaces Istio) |
 
 #### k8gb
 **Repository:** [k8gb](https://github.com/openova-io/k8gb)
@@ -138,6 +139,16 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Type | Description |
 |----------|------|-------------|
 | [ADR-EXTERNAL-DNS](https://github.com/openova-io/external-dns/blob/main/docs/ADR-EXTERNAL-DNS.md) | ADR | DNS record synchronization |
+
+---
+
+### Failover & Resilience
+
+#### Failover Controller
+**Repository:** [failover-controller](https://github.com/openova-io/failover-controller)
+| Document | Type | Description |
+|----------|------|-------------|
+| [ADR-FAILOVER-CONTROLLER](https://github.com/openova-io/failover-controller/blob/main/docs/ADR-FAILOVER-CONTROLLER.md) | ADR | Generic failover orchestration |
 
 ---
 
@@ -281,10 +292,10 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 |-----------|---------|
 | Terraform | Bootstrap IaC |
 | Crossplane | Day-2 cloud provisioning |
-| Cilium | CNI with eBPF |
-| Istio | Service mesh |
+| Cilium | CNI + Service Mesh (eBPF) |
 | Coraza | WAF |
 | Flux | GitOps |
+| Gitea | Internal Git server |
 | cert-manager | TLS certificates |
 | External Secrets | Secrets operator |
 | Vault | Secrets backend |
@@ -292,11 +303,13 @@ Wizard/CLI for bootstrapping organization-specific Kubernetes infrastructure fro
 | VPA | Vertical autoscaling |
 | KEDA | Horizontal autoscaling |
 | Grafana Stack | Observability |
+| OpenTelemetry | Application tracing |
 | Harbor | Container registry |
 | MinIO | Object storage |
 | Velero | Backup |
 | ExternalDNS | DNS sync |
-| k8gb | GSLB |
+| k8gb | GSLB (authoritative DNS) |
+| Failover Controller | Failover orchestration |
 | Backstage | IDP |
 
 ### À La Carte Components

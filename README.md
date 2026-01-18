@@ -39,8 +39,9 @@ Each infrastructure component has documentation in its own repository:
 |-----------|------------|---------------|
 | Terraform | [terraform](https://github.com/openova-io/terraform) | `docs/` |
 | Flux | [flux](https://github.com/openova-io/flux) | `docs/` |
-| Istio | [istio](https://github.com/openova-io/istio) | `docs/` |
 | Cilium | [cilium](https://github.com/openova-io/cilium) | `docs/` |
+| Gitea | [gitea](https://github.com/openova-io/gitea) | `docs/` |
+| k8gb | [k8gb](https://github.com/openova-io/k8gb) | `docs/` |
 | Grafana | [grafana](https://github.com/openova-io/grafana) | `docs/` |
 | External Secrets | [external-secrets](https://github.com/openova-io/external-secrets) | `docs/` |
 | CNPG | [cnpg](https://github.com/openova-io/cnpg) | `docs/` |
@@ -56,4 +57,4 @@ Each infrastructure component has documentation in its own repository:
 
 ---
 
-*Part of [OpenOva](https://github.com/openova-io)*
+*Part of [OpenOva](https://openova.io)*

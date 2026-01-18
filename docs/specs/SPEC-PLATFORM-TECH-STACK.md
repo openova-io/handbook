@@ -1,6 +1,6 @@
 # SPEC: Platform Technology Stack
 
-**Updated:** 2026-01-16
+**Updated:** 2026-01-17
 
 ## Overview
 
@@ -12,38 +12,40 @@ Technology stack for the OpenOva Kubernetes platform. Components are categorized
 flowchart TB
     subgraph External["External Services"]
         DNS[DNS Provider]
-        Git[Git Provider]
         Archival[Archival S3]
     end
 
     subgraph Region1["Region 1"]
         subgraph K8s1["Kubernetes Cluster"]
-            Istio1[Istio Gateway]
+            GW1[Gateway API]
             Apps1[Applications]
             Data1[Data Services]
         end
         Vault1[Vault]
         Harbor1[Harbor]
         MinIO1[MinIO]
+        Gitea1[Gitea]
     end
 
     subgraph Region2["Region 2"]
         subgraph K8s2["Kubernetes Cluster"]
-            Istio2[Istio Gateway]
+            GW2[Gateway API]
             Apps2[Applications]
             Data2[Data Services]
         end
         Vault2[Vault]
         Harbor2[Harbor]
         MinIO2[MinIO]
+        Gitea2[Gitea]
     end
 
-    DNS --> Istio1
-    DNS --> Istio2
+    DNS --> GW1
+    DNS --> GW2
     Harbor1 <-->|"Replicate"| Harbor2
     MinIO1 -->|"Tier to"| Archival
     MinIO2 -->|"Tier to"| Archival
     Vault1 <-->|"PushSecrets"| Vault2
+    Gitea1 <-->|"Bidirectional Mirror"| Gitea2
 ```
 
 ## Mandatory Components
@@ -55,47 +57,44 @@ flowchart TB
 | Terraform | Bootstrap IaC | Initial cluster provisioning only |
 | Crossplane | Day-2 IaC | Cloud resource provisioning post-bootstrap |
 
-### Networking
+### Networking & Service Mesh
 
 | Component | Purpose | Notes |
 |-----------|---------|-------|
-| Cilium | CNI with eBPF | Network policies, Hubble observability |
-| Istio | Service mesh | User selects mode (Ambient/Waypoint/Sidecar) |
-| Coraza | WAF | OWASP CRS, integrated with Istio |
+| Cilium | CNI + Service Mesh | eBPF networking, mTLS, L7 policies |
+| Coraza | WAF | OWASP CRS, integrated with Gateway API |
 | ExternalDNS | DNS sync | Syncs K8s resources to DNS provider |
-| k8gb | GSLB | Cross-region DNS-based load balancing |
+| k8gb | GSLB | Authoritative DNS for cross-region load balancing |
 
-### Istio Mode Options
+### Cilium Service Mesh Features
 
 ```mermaid
 flowchart LR
-    subgraph Ambient["Ambient Mode"]
-        Z1[ztunnel]
-    end
-    subgraph Waypoint["Ambient + Waypoint"]
-        Z2[ztunnel]
-        W[Waypoint Proxy]
-    end
-    subgraph Sidecar["Sidecar Mode"]
-        E[Envoy Sidecar]
+    subgraph Cilium["Cilium Service Mesh"]
+        eBPF[eBPF Data Plane]
+        Hubble[Hubble Observability]
+        Envoy[Envoy L7 Proxy]
     end
 
-    Ambient -->|"L4 only"| L4[mTLS]
-    Waypoint -->|"L4 + L7"| L7[Full Traffic Mgmt]
-    Sidecar -->|"L4 + L7"| L7Full[Full + Per-Pod Traces]
+    eBPF -->|"mTLS"| mTLS[Transparent Encryption]
+    eBPF -->|"L3/L4"| Policies[Network Policies]
+    Envoy -->|"L7"| Traffic[Traffic Management]
+    Hubble -->|"Metrics"| Grafana[Grafana]
 ```
 
-| Mode | L4 mTLS | L7 Traffic | OTel Traces | Resources |
-|------|---------|------------|-------------|-----------|
-| Ambient | ✅ | ❌ | ⚠️ Limited | Low |
-| Ambient + Waypoint | ✅ | ✅ | ✅ | Medium |
-| Sidecar | ✅ | ✅ | ✅ | High |
+| Feature | How It Works |
+|---------|--------------|
+| mTLS | eBPF + WireGuard encryption |
+| L7 Policies | CiliumEnvoyConfig |
+| Traffic Management | HTTPRoute (Gateway API) |
+| Observability | Hubble + OpenTelemetry |
 
-### GitOps & IDP
+### GitOps, Git & IDP
 
 | Component | Purpose | Notes |
 |-----------|---------|-------|
 | Flux | GitOps engine | ArgoCD as future option |
+| Gitea | Internal Git | Bidirectional mirror, Gitea Actions |
 | Backstage | Developer portal | Service catalog, templates |
 
 ### Security
@@ -124,6 +123,7 @@ flowchart LR
 | Mimir | Metrics storage | Prometheus-compatible |
 | Tempo | Distributed tracing | OpenTelemetry native |
 | Grafana | Visualization | Dashboards and alerting |
+| OpenTelemetry | Application tracing | Auto-instrumentation (independent of mesh) |
 
 ### Storage & Registry
 
@@ -132,6 +132,12 @@ flowchart LR
 | Harbor | Container registry | Trivy scanning, cross-region replication |
 | MinIO | Object storage | Tiered to archival S3 |
 | Velero | Backup/restore | Backs up to archival S3 |
+
+### Failover & Resilience
+
+| Component | Purpose | Notes |
+|-----------|---------|-------|
+| Failover Controller | Failover orchestration | Generic, event-driven |
 
 ## User Choice Options
 
@@ -142,23 +148,20 @@ flowchart LR
 | Hetzner Cloud | ✅ Available | hcloud |
 | Huawei Cloud | 🔜 Coming | huaweicloud |
 | Oracle Cloud (OCI) | 🔜 Coming | oci |
-| AWS | 🔜 Coming | aws |
-| GCP | 🔜 Coming | gcp |
-| Azure | 🔜 Coming | azure |
 
 ### Regions
 
 | Option | Description |
 |--------|-------------|
 | 1 region | Allowed (no DR) |
-| 2+ regions | Recommended (multi-region DR) |
+| 2 regions | Recommended (multi-region DR) |
 
 ### LoadBalancer
 
 | Option | How It Works | Cost |
 |--------|--------------|------|
 | Cloud Provider LB | Native LB (Hetzner LB, etc.) | ~€5-10/mo |
-| k8gb DNS-based LB | Istio Gateway + k8gb health-checks | Free |
+| k8gb DNS-based LB | Gateway API (hostNetwork) + k8gb health-checks | Free |
 | Cilium L2 Mode | ARP-based (same subnet only) | Free |
 
 ### DNS Provider
@@ -204,19 +207,11 @@ Used for backup and MinIO tiering:
 | AWS WAF | External | If AWS chosen |
 | Both (layered) | Hybrid | Defense in depth |
 
-### Git Provider
-
-| Provider | Type |
-|----------|------|
-| GitHub | SaaS |
-| GitLab SaaS | SaaS |
-| GitLab Self-Hosted | Self-hosted |
-
 ## À La Carte Data Services
 
 | Component | Purpose | DR Strategy |
 |-----------|---------|-------------|
-| CNPG | PostgreSQL operator | WAL streaming |
+| CNPG | PostgreSQL operator | WAL streaming (async primary-replica) |
 | MongoDB | Document database | CDC via Debezium → Redpanda |
 | Redpanda | Event streaming | MirrorMaker2 |
 | Dragonfly | Redis-compatible cache | REPLICAOF |
@@ -237,6 +232,7 @@ flowchart TB
         MG1[MongoDB Primary]
         RP1[Redpanda]
         DF1[Dragonfly Primary]
+        GT1[Gitea]
     end
 
     subgraph Region2["Region 2 (DR)"]
@@ -244,6 +240,7 @@ flowchart TB
         MG2[MongoDB Standby]
         RP2[Redpanda]
         DF2[Dragonfly Replica]
+        GT2[Gitea]
     end
 
     PG1 -->|"WAL Streaming"| PG2
@@ -251,18 +248,19 @@ flowchart TB
     RP1 -->|"MirrorMaker2"| RP2
     RP2 -->|"Sink Connector"| MG2
     DF1 -->|"REPLICAOF"| DF2
+    GT1 <-->|"Bidirectional Mirror"| GT2
 ```
 
 ## Resource Estimates (Per Region)
 
 | Category | Components | Estimated Resources |
 |----------|------------|---------------------|
-| Core Platform | Istio, Cilium, Flux, ESO, Kyverno | ~2GB RAM |
+| Core Platform | Cilium, Flux, ESO, Kyverno | ~2GB RAM |
 | Observability | Grafana Stack + Alloy | ~3GB RAM |
 | Storage | Harbor, MinIO, Velero | ~4GB RAM |
 | Security | Vault, cert-manager, Trivy | ~1GB RAM |
-| IDP | Backstage | ~1GB RAM |
-| **Minimum Total** | | ~11GB RAM |
+| Git & IDP | Gitea, Backstage | ~2GB RAM |
+| **Minimum Total** | | ~12GB RAM |
 
 **Recommended minimum:** 3 nodes × 8GB RAM = 24GB per region
 
@@ -270,4 +268,4 @@ flowchart TB
 
 - [ADR-PLATFORM-ENGINEERING-TOOLS](../adrs/ADR-PLATFORM-ENGINEERING-TOOLS.md)
 - [ADR-MULTI-REGION-STRATEGY](../adrs/ADR-MULTI-REGION-STRATEGY.md)
-- [ADR-OPERATIONAL-RESILIENCE](../adrs/ADR-OPERATIONAL-RESILIENCE.md)
+- [ADR-CILIUM-SERVICE-MESH](../../cilium/docs/ADR-CILIUM-SERVICE-MESH.md)
