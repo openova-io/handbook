@@ -75,7 +75,7 @@ Each data service uses its own replication mechanism:
 | CNPG (Postgres) | WAL streaming to async standby | Near-zero |
 | MongoDB | CDC via Debezium → Redpanda | Seconds |
 | Redpanda | MirrorMaker2 | Seconds |
-| Dragonfly | REPLICAOF command | Seconds |
+| Valkey | REPLICAOF command | Seconds |
 | MinIO | Bucket replication | Minutes |
 | Harbor | Registry replication | Minutes |
 | Vault | ESO PushSecrets to both | Seconds |

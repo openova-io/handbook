@@ -145,20 +145,20 @@ kubectl exec -it mongodb-0 -n databases -- mongosh --eval "rs.status()"
 kubectl exec -it mongodb-0 -n databases -- mongosh --eval "db.runCommand({ping: 1})"
 ```
 
-### Dragonfly (Redis)
+### Valkey (Redis-compatible)
 
 ```bash
 # Test connection
-kubectl exec -it dragonfly-0 -n databases -- redis-cli ping
+kubectl exec -it valkey-0 -n databases -- valkey-cli ping
 
 # Check memory
-kubectl exec -it dragonfly-0 -n databases -- redis-cli info memory
+kubectl exec -it valkey-0 -n databases -- valkey-cli info memory
 
 # Check clients
-kubectl exec -it dragonfly-0 -n databases -- redis-cli info clients
+kubectl exec -it valkey-0 -n databases -- valkey-cli info clients
 
 # Check replication
-kubectl exec -it dragonfly-0 -n databases -- redis-cli info replication
+kubectl exec -it valkey-0 -n databases -- valkey-cli info replication
 ```
 
 ### Redpanda

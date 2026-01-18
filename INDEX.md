@@ -45,6 +45,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | [ADR-PROGRESSIVE-DELIVERY](./docs/adrs/ADR-PROGRESSIVE-DELIVERY.md) | Progressive delivery strategy |
 | [ADR-MULTI-REGION-STRATEGY](./docs/adrs/ADR-MULTI-REGION-STRATEGY.md) | Multi-region independent clusters |
 | [ADR-ZERO-HUMAN-INTERVENTION-OPS](./docs/adrs/ADR-ZERO-HUMAN-INTERVENTION-OPS.md) | Zero human intervention operations |
+| [ADR-OPEN-BANKING-BLUEPRINT](./docs/adrs/ADR-OPEN-BANKING-BLUEPRINT.md) | Open Banking vertical blueprint |
 | [ADR-PLATFORM-ENGINEERING-TOOLS](./docs/adrs/ADR-PLATFORM-ENGINEERING-TOOLS.md) | Crossplane, Backstage, Flux |
 | [ADR-REPOSITORY-STRUCTURE](./docs/adrs/ADR-REPOSITORY-STRUCTURE.md) | Repository organization |
 | [ADR-AIRGAP-COMPLIANCE](./docs/adrs/ADR-AIRGAP-COMPLIANCE.md) | Air-gap compliance strategy |
@@ -59,6 +60,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | [SPEC-LLM-GATEWAY](./docs/specs/SPEC-LLM-GATEWAY.md) | LLM Gateway specification |
 | [SPEC-CIRCUIT-BREAKER](./docs/specs/SPEC-CIRCUIT-BREAKER.md) | Cilium circuit breaker patterns |
 | [SPEC-AUTO-REMEDIATION](./docs/specs/SPEC-AUTO-REMEDIATION.md) | Auto-remediation workflows |
+| [SPEC-OPEN-BANKING-ARCHITECTURE](./docs/specs/SPEC-OPEN-BANKING-ARCHITECTURE.md) | Open Banking architecture |
 
 ### Blueprints (Deployable Configurations)
 
@@ -68,6 +70,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | [BLUEPRINT-DEPLOYMENT](./docs/blueprints/BLUEPRINT-DEPLOYMENT.md) | Deployment templates |
 | [BLUEPRINT-DNS-FAILOVER](./docs/blueprints/BLUEPRINT-DNS-FAILOVER.md) | DNS failover setup |
 | [BLUEPRINT-LLM-GATEWAY](./docs/blueprints/BLUEPRINT-LLM-GATEWAY.md) | LLM Gateway deployment |
+| [BLUEPRINT-OPEN-BANKING](./docs/blueprints/BLUEPRINT-OPEN-BANKING.md) | Open Banking sandbox |
 
 ### Runbooks (Operational Procedures)
 
@@ -243,11 +246,11 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 |----------|------|-------------|
 | [ADR-DATABASE-MONGODB](https://github.com/openova-io/mongodb/blob/main/docs/ADR-DATABASE-MONGODB.md) | ADR | MongoDB operator (CDC via Debezium) |
 
-#### Dragonfly
-**Repository:** [dragonfly](https://github.com/openova-io/dragonfly)
+#### Valkey
+**Repository:** [valkey](https://github.com/openova-io/valkey)
 | Document | Type | Description |
 |----------|------|-------------|
-| [ADR-CACHING-DRAGONFLY](https://github.com/openova-io/dragonfly/blob/main/docs/ADR-CACHING-DRAGONFLY.md) | ADR | Redis-compatible cache (REPLICAOF DR) |
+| [ADR-CACHING-VALKEY](https://github.com/openova-io/valkey/blob/main/docs/ADR-CACHING-VALKEY.md) | ADR | Redis-compatible cache (BSD-3, REPLICAOF DR) |
 
 #### Redpanda
 **Repository:** [redpanda](https://github.com/openova-io/redpanda)
@@ -270,6 +273,47 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Type | Description |
 |----------|------|-------------|
 | [ADR-WEBRTC-GATEWAY](https://github.com/openova-io/stunner/blob/main/docs/ADR-WEBRTC-GATEWAY.md) | ADR | WebRTC gateway |
+
+---
+
+### Identity (À La Carte)
+
+#### Keycloak
+**Repository:** [keycloak](https://github.com/openova-io/keycloak)
+| Document | Type | Description |
+|----------|------|-------------|
+| [ADR-KEYCLOAK](https://github.com/openova-io/keycloak/blob/main/docs/ADR-KEYCLOAK.md) | ADR | OIDC/OAuth/FAPI Authorization Server |
+
+---
+
+### Monetization (À La Carte)
+
+#### OpenMeter
+**Repository:** [openmeter](https://github.com/openova-io/openmeter)
+| Document | Type | Description |
+|----------|------|-------------|
+| [ADR-OPENMETER](https://github.com/openova-io/openmeter/blob/main/docs/ADR-OPENMETER.md) | ADR | Usage metering for APIs |
+
+#### Lago
+**Repository:** [lago](https://github.com/openova-io/lago)
+| Document | Type | Description |
+|----------|------|-------------|
+| [ADR-LAGO](https://github.com/openova-io/lago/blob/main/docs/ADR-LAGO.md) | ADR | Usage-based billing and invoicing |
+
+---
+
+### Meta Blueprints (Vertical Solutions)
+
+Meta blueprints bundle a la carte components with custom services for specific industry verticals.
+
+#### Open Banking
+**Repository:** [open-banking](https://github.com/openova-io/open-banking)
+
+Bundles: Keycloak + OpenMeter + Lago + custom services for PSD2/FAPI compliance.
+
+| Document | Type | Description |
+|----------|------|-------------|
+| [ADR-OPEN-BANKING-SERVICES](https://github.com/openova-io/open-banking/blob/main/docs/ADR-OPEN-BANKING-SERVICES.md) | ADR | Custom Open Banking services (ext-authz, APIs) |
 
 ---
 
@@ -314,14 +358,23 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 ### À La Carte Components
 
-| Component | Purpose |
-|-----------|---------|
-| CNPG | PostgreSQL |
-| MongoDB | Document database |
-| Redpanda | Event streaming |
-| Dragonfly | Cache |
-| Stalwart | Email |
-| STUNner | WebRTC |
+| Category | Component | Purpose |
+|----------|-----------|---------|
+| Data | CNPG | PostgreSQL |
+| Data | MongoDB | Document database |
+| Data | Redpanda | Event streaming |
+| Data | Valkey | Cache |
+| Communication | Stalwart | Email |
+| Communication | STUNner | WebRTC |
+| Identity | Keycloak | OIDC/OAuth/FAPI Authorization Server |
+| Monetization | OpenMeter | Usage metering |
+| Monetization | Lago | Billing and invoicing |
+
+### Meta Blueprints (Vertical Solutions)
+
+| Blueprint | Bundles | Purpose |
+|-----------|---------|---------|
+| Open Banking | Keycloak + OpenMeter + Lago + custom services | PSD2/FAPI fintech sandbox with monetization |
 
 ---
 

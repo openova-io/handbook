@@ -26,7 +26,7 @@ openova-io/
 ├── kyverno/            # Policy engine
 ├── cnpg/               # PostgreSQL
 ├── mongodb/            # MongoDB
-├── dragonfly/          # Cache
+├── valkey/             # Cache
 ├── redpanda/           # Streaming
 ├── minio/              # Object storage
 ├── velero/             # Backup

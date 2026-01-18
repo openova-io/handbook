@@ -182,7 +182,7 @@ Before promoting stateful services, Failover Controller queries external witness
 | Stateless apps | k8gb DNS (automatic) | Not needed |
 | CNPG (Postgres) | Failover Controller | Yes - witness verified |
 | MongoDB | Failover Controller | Yes - witness verified |
-| Dragonfly | Failover Controller | Yes - witness verified |
+| Valkey | Failover Controller | Yes - witness verified |
 
 See [SPEC-SPLIT-BRAIN-PROTECTION](./SPEC-SPLIT-BRAIN-PROTECTION.md) for detailed algorithm.
 

@@ -71,7 +71,7 @@ Each infrastructure component has its own repository with dedicated documentatio
 | Kyverno | [kyverno](https://github.com/openova-io/kyverno) | ADR-031, ADR-032 |
 | CNPG | [cnpg](https://github.com/openova-io/cnpg) | ADR-021 |
 | MongoDB | [mongodb](https://github.com/openova-io/mongodb) | ADR-021 |
-| Dragonfly | [dragonfly](https://github.com/openova-io/dragonfly) | ADR-027 |
+| Valkey | [valkey](https://github.com/openova-io/valkey) | ADR-CACHING-VALKEY |
 | Redpanda | [redpanda](https://github.com/openova-io/redpanda) | ADR-026 |
 | MinIO | [minio](https://github.com/openova-io/minio) | ADR-012 |
 | Velero | [velero](https://github.com/openova-io/velero) | ADR-023 |

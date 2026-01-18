@@ -214,7 +214,7 @@ Used for backup and MinIO tiering:
 | CNPG | PostgreSQL operator | WAL streaming (async primary-replica) |
 | MongoDB | Document database | CDC via Debezium → Redpanda |
 | Redpanda | Event streaming | MirrorMaker2 |
-| Dragonfly | Redis-compatible cache | REPLICAOF |
+| Valkey | Redis-compatible cache (BSD-3) | REPLICAOF |
 
 ## À La Carte Communication
 
@@ -231,7 +231,7 @@ flowchart TB
         PG1[CNPG Primary]
         MG1[MongoDB Primary]
         RP1[Redpanda]
-        DF1[Dragonfly Primary]
+        VK1[Valkey Primary]
         GT1[Gitea]
     end
 
@@ -239,7 +239,7 @@ flowchart TB
         PG2[CNPG Standby]
         MG2[MongoDB Standby]
         RP2[Redpanda]
-        DF2[Dragonfly Replica]
+        VK2[Valkey Replica]
         GT2[Gitea]
     end
 
@@ -247,7 +247,7 @@ flowchart TB
     MG1 -->|"Debezium CDC"| RP1
     RP1 -->|"MirrorMaker2"| RP2
     RP2 -->|"Sink Connector"| MG2
-    DF1 -->|"REPLICAOF"| DF2
+    VK1 -->|"REPLICAOF"| VK2
     GT1 <-->|"Bidirectional Mirror"| GT2
 ```
 

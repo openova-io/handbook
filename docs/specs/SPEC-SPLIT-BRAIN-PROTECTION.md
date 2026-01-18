@@ -1,10 +1,10 @@
 # SPEC: Split-Brain Protection
 
-**Updated:** 2026-01-17
+**Updated:** 2026-01-18
 
 ## Overview
 
-Split-brain protection using external DNS witnesses to safely detect region failures and prevent data corruption during failover.
+Split-brain protection using a **cloud witness** (Cloudflare Workers + KV) to safely coordinate failover and prevent data corruption during network partitions.
 
 ## Problem Statement
 
@@ -14,181 +14,154 @@ In multi-region deployments, network partitions can cause "split-brain" scenario
 - Data diverges and becomes inconsistent
 - Recovery requires manual intervention and data loss
 
-## Solution: External DNS Witnesses
+### Why k8gb Alone Is Insufficient
 
-Use public DNS resolvers as independent witnesses to verify region availability before triggering failover.
+Deep analysis of k8gb source code revealed that k8gb clusters operate **independently** with **DNS-based discovery only**:
 
-## Architecture
+| Aspect | k8gb Behavior |
+|--------|---------------|
+| Local health | Direct check of Ingress/Gateway endpoints |
+| Cross-cluster "health" | DNS query to `localtargets-*` record |
+| Communication | DNS only - no direct health checks |
+
+**Critical Problem**: k8gb cannot distinguish between:
+- "Region is down" (failover needed)
+- "Network partition" (failover NOT wanted)
+
+Both produce the same symptom: DNS query fails or times out.
+
+## Solution: Cloud Witness (Cloudflare Workers + KV)
+
+Use a **third-party cloud service** as a witness to determine who should be active.
+
+### Why Cloud Witness?
+
+| Approach | Automatic? | Split-brain Safe? | Dependency |
+|----------|------------|-------------------|------------|
+| **Cloud Witness (selected)** | Yes | Yes | Cloudflare reachability |
+| External DNS resolvers | Partial | Partial | Can verify reachability but not authority |
+| 3-region quorum | Yes | Yes | Third region (expensive) |
+| Manual DR | No | Yes | Human operator |
+
+### Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Witnesses["External DNS Witnesses"]
-        DNS1[8.8.8.8<br/>Google]
-        DNS2[1.1.1.1<br/>Cloudflare]
-        DNS3[9.9.9.9<br/>Quad9]
+    subgraph Witness["Cloud Witness (Cloudflare)"]
+        Worker[Cloudflare Worker]
+        KV[KV Store<br/>Lease: region-1, TTL: 30s]
     end
 
-    subgraph Region1["Region 1"]
-        FC1[Failover Controller]
-        K8GB1[k8gb CoreDNS]
-        CNPG1[CNPG Primary]
+    subgraph Region1["Region 1 (Active)"]
+        FC1[Failover Controller<br/>State: ACTIVE]
+        GW1[Gateway API<br/>ready: true]
+        DB1[CNPG Primary]
     end
 
-    subgraph Region2["Region 2"]
-        FC2[Failover Controller]
-        K8GB2[k8gb CoreDNS]
-        CNPG2[CNPG Replica]
+    subgraph Region2["Region 2 (Standby)"]
+        FC2[Failover Controller<br/>State: STANDBY]
+        GW2[Gateway API<br/>ready: false]
+        DB2[CNPG Standby]
     end
 
-    FC1 -->|"Can witnesses reach R2?"| DNS1
-    FC1 --> DNS2
-    FC1 --> DNS3
-
-    FC2 -->|"Can witnesses reach R1?"| DNS1
-    FC2 --> DNS2
-    FC2 --> DNS3
-
-    DNS1 -.->|"Check"| K8GB1
-    DNS1 -.->|"Check"| K8GB2
+    FC1 -->|"Renew lease<br/>every 10s"| Worker
+    FC2 -->|"Query lease<br/>every 10s"| Worker
+    Worker --> KV
 ```
 
-## Witness Selection
+## Lease Mechanism
 
-| Resolver | Provider | Location | Purpose |
-|----------|----------|----------|---------|
-| 8.8.8.8 | Google | Global anycast | Primary witness |
-| 1.1.1.1 | Cloudflare | Global anycast | Secondary witness |
-| 9.9.9.9 | Quad9 | Global anycast | Tertiary witness |
+### How It Works
 
-### Why These Resolvers
-
-- **Independent**: Not hosted on same infrastructure as either region
-- **Reliable**: 99.99%+ uptime, anycast for global availability
-- **Diverse**: Different providers reduce correlated failures
-- **Free**: No cost, no API keys required
-
-## Quorum-Based Detection
-
-### Decision Matrix
-
-| 8.8.8.8 | 1.1.1.1 | 9.9.9.9 | Decision |
-|---------|---------|---------|----------|
-| ✅ | ✅ | ✅ | Region UP - no action |
-| ✅ | ✅ | ❌ | Region UP - no action |
-| ✅ | ❌ | ❌ | **Region DOWN** - 2/3 agree |
-| ❌ | ✅ | ❌ | **Region DOWN** - 2/3 agree |
-| ❌ | ❌ | ✅ | **Region DOWN** - 2/3 agree |
-| ❌ | ❌ | ❌ | **Region DOWN** - 3/3 agree |
-
-**Quorum requirement**: 2 out of 3 witnesses must agree the other region is unreachable.
-
-## Detection Flow
+1. **Active region holds lease**: Renews every 10s, lease TTL is 30s
+2. **Standby region queries**: Checks who holds the lease
+3. **Failover on expiry**: If lease expires, standby can acquire it
 
 ```mermaid
 sequenceDiagram
-    participant FC as Failover Controller (R2)
-    participant G as 8.8.8.8
-    participant C as 1.1.1.1
-    participant Q as 9.9.9.9
-    participant K8GB as k8gb CoreDNS (R1)
+    participant FC1 as FC (R1) - Active
+    participant CF as Cloudflare KV
+    participant FC2 as FC (R2) - Standby
 
-    Note over FC: Detect potential Region 1 failure
+    loop Every 10 seconds (Normal Operation)
+        FC1->>CF: POST /lease/renew
+        CF-->>FC1: { active: true, holder: "eu1" }
 
-    FC->>G: "Resolve region1.gslb.example.com via R1 k8gb"
-    G->>K8GB: DNS query
-    K8GB--xG: Timeout (Region 1 down)
-    G-->>FC: Cannot resolve
+        FC2->>CF: GET /lease/status
+        CF-->>FC2: { active: false, holder: "eu1" }
+    end
 
-    FC->>C: "Resolve region1.gslb.example.com via R1 k8gb"
-    C->>K8GB: DNS query
-    K8GB--xC: Timeout
-    C-->>FC: Cannot resolve
+    Note over FC1: Region 1 crashes
+    Note over FC1: Stops renewing lease
 
-    FC->>Q: "Resolve region1.gslb.example.com via R1 k8gb"
-    Q->>K8GB: DNS query
-    K8GB--xQ: Timeout
-    Q-->>FC: Cannot resolve
+    loop After crash (FC2 continues polling)
+        FC2->>CF: T+10s: GET /lease/status
+        CF-->>FC2: { holder: "eu1" } (still valid, 20s left)
 
-    Note over FC: 3/3 witnesses confirm R1 unreachable
-    Note over FC: SAFE TO PROMOTE - Not split-brain
+        FC2->>CF: T+20s: GET /lease/status
+        CF-->>FC2: { holder: "eu1" } (still valid, 10s left)
+    end
+
+    Note over CF: T+30s: Lease expires (TTL reached)
+
+    FC2->>CF: T+35s: GET /lease/status
+    CF-->>FC2: { holder: null } (expired!)
+
+    FC2->>CF: POST /lease/acquire
+    CF-->>FC2: { active: true, holder: "eu2" }
+
+    Note over FC2: Becomes ACTIVE
+    Note over FC2: Promotes DB, enables Gateway
 ```
 
-## Implementation
+## Cloudflare Worker Implementation
 
-### Detection Algorithm
+```javascript
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const region = request.headers.get("X-Region-ID");
+    const domain = url.searchParams.get("domain") || "default";
+    const key = `lease:${domain}:active-region`;
 
-```go
-package splitbrain
-
-import (
-    "context"
-    "net"
-    "time"
-)
-
-type WitnessConfig struct {
-    Resolvers       []string      // ["8.8.8.8", "1.1.1.1", "9.9.9.9"]
-    TargetHostname  string        // "region1.gslb.example.com"
-    QueryTimeout    time.Duration // 10s
-    Quorum          int           // 2
-}
-
-func IsOtherRegionTrulyDown(ctx context.Context, config WitnessConfig) (bool, error) {
-    unreachableCount := 0
-    results := make(map[string]bool)
-
-    for _, resolver := range config.Resolvers {
-        reachable := canResolverReachTarget(ctx, resolver, config.TargetHostname, config.QueryTimeout)
-        results[resolver] = reachable
-        if !reachable {
-            unreachableCount++
-        }
+    if (url.pathname === "/lease/renew" && request.method === "POST") {
+      const current = await env.LEASE_KV.get(key);
+      if (current === region || current === null) {
+        await env.LEASE_KV.put(key, region, { expirationTtl: 30 });
+        return Response.json({ active: true, holder: region });
+      }
+      return Response.json({ active: false, holder: current });
     }
 
-    // Need quorum (default 2/3) to agree region is down
-    isTrulyDown := unreachableCount >= config.Quorum
-
-    return isTrulyDown, nil
-}
-
-func canResolverReachTarget(ctx context.Context, resolver, hostname string, timeout time.Duration) bool {
-    r := &net.Resolver{
-        PreferGo: true,
-        Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-            d := net.Dialer{Timeout: timeout}
-            return d.DialContext(ctx, "udp", resolver+":53")
-        },
+    if (url.pathname === "/lease/acquire" && request.method === "POST") {
+      const current = await env.LEASE_KV.get(key);
+      if (!current) {
+        await env.LEASE_KV.put(key, region, { expirationTtl: 30 });
+        return Response.json({ active: true, holder: region });
+      }
+      return Response.json({ active: false, holder: current });
     }
 
-    queryCtx, cancel := context.WithTimeout(ctx, timeout)
-    defer cancel()
+    if (url.pathname === "/lease/status") {
+      const current = await env.LEASE_KV.get(key);
+      return Response.json({
+        active: current === region,
+        holder: current || null
+      });
+    }
 
-    _, err := r.LookupHost(queryCtx, hostname)
-    return err == nil
+    if (url.pathname === "/lease/release" && request.method === "POST") {
+      const current = await env.LEASE_KV.get(key);
+      if (current === region) {
+        await env.LEASE_KV.delete(key);
+        return Response.json({ released: true });
+      }
+      return Response.json({ released: false, holder: current });
+    }
+
+    return new Response("Not found", { status: 404 });
+  }
 }
-```
-
-### Configuration
-
-```yaml
-apiVersion: failover.openova.io/v1alpha1
-kind: FailoverConfig
-metadata:
-  name: split-brain-protection
-spec:
-  witnesses:
-    externalDNS:
-      resolvers:
-        - 8.8.8.8
-        - 1.1.1.1
-        - 9.9.9.9
-      targetHostname: region-1.gslb.example.com
-      queryTimeout: 10s
-      quorum: 2
-
-  healthCheck:
-    interval: 10s
-    failureThreshold: 3  # 3 consecutive failures before checking witnesses
 ```
 
 ## Scenarios
@@ -198,45 +171,116 @@ spec:
 ```
 Region 1 completely fails (power, network, etc.)
 
-1. Region 2 Failover Controller detects R1 unhealthy (local check)
-2. Failover Controller queries all 3 witnesses
-3. All 3 witnesses report: "Cannot reach R1 k8gb CoreDNS"
-4. Quorum met (3/3 > 2)
-5. Decision: SAFE TO PROMOTE
-6. CNPG replica promoted to primary
-7. DNS failover (k8gb already handled this independently)
+Timeline:
+T+0s:   Region 1 crashes, Failover Controller stops renewing
+T+10s:  Region 2 queries → lease still valid (20s left)
+T+20s:  Region 2 queries → lease still valid (10s left)
+T+30s:  Lease expires in Cloudflare KV
+T+35s:  Region 2 queries → lease is null
+T+36s:  Region 2 acquires lease
+T+37s:  Region 2 promotes CNPG, enables Gateway
+T+40s:  k8gb sees endpoints in R2, updates DNS
+
+Result: Clean failover, no split-brain
 ```
 
 ### Scenario 2: Network Partition (Split-Brain Risk)
 
 ```
-Network partition between R1 and R2 (both still running)
+Network partition between R1 and R2 (both still running, both reach Cloudflare)
 
-1. Region 2 Failover Controller detects R1 unhealthy (local check)
-2. Failover Controller queries all 3 witnesses
-3. Witness results:
-   - 8.8.8.8: "Can reach R1 k8gb" ✅
-   - 1.1.1.1: "Can reach R1 k8gb" ✅
-   - 9.9.9.9: "Can reach R1 k8gb" ✅
-4. Quorum NOT met (0/3 < 2)
-5. Decision: DO NOT PROMOTE - This is a network partition, not failure
-6. Wait for partition to heal
+R1 (Active):
+- Continues renewing lease every 10s
+- Cloudflare accepts renewal
+- Stays ACTIVE
+
+R2 (Standby):
+- Queries lease status every 10s
+- Sees R1 still holds lease
+- Cannot acquire lease
+- Stays STANDBY
+
+Result: NO split-brain - witness is single source of truth
 ```
 
-### Scenario 3: Witness Unavailability
+### Scenario 3: Witness Unavailable
 
 ```
-One or more witnesses temporarily unavailable
+Cloudflare Workers temporarily unavailable
 
-1. Region 2 Failover Controller queries witnesses
-2. Results:
-   - 8.8.8.8: "Cannot reach R1" ❌
-   - 1.1.1.1: Query timeout (witness unreachable) ⚠️
-   - 9.9.9.9: "Cannot reach R1" ❌
-3. Treat timeout as "unknown" (not counted either way)
-4. 2 out of 2 responding witnesses agree R1 down
-5. Decision: SAFE TO PROMOTE (quorum met with responding witnesses)
+R1 (Active):
+- Cannot renew lease → keeps current state (ACTIVE)
+- Does NOT demote itself
+
+R2 (Standby):
+- Cannot query status → keeps current state (STANDBY)
+- Does NOT try to acquire
+
+Result: NO failover possible, but NO split-brain either (safe failure mode)
 ```
+
+### Scenario 4: Planned Failover (DR Test)
+
+```yaml
+# Operator applies FailoverCommand
+apiVersion: failover.openova.io/v1
+kind: FailoverCommand
+metadata:
+  name: dr-test
+spec:
+  domain: acme-production
+  action: failover
+  targetRegion: eu2
+  reason: "Quarterly DR test"
+  approvedBy: "sre@acme.com"
+```
+
+```
+1. R1 FC receives command
+2. R1 FC releases lease (POST /lease/release)
+3. R1 FC demotes DB, disables Gateway
+4. R1 FC transitions to STANDBY
+5. R2 FC sees lease available
+6. R2 FC acquires lease
+7. R2 FC promotes DB, enables Gateway
+8. R2 FC transitions to ACTIVE
+
+Result: Controlled failover with audit trail
+```
+
+## Configuration
+
+```yaml
+apiVersion: failover.openova.io/v1
+kind: FailoverDomain
+metadata:
+  name: acme-production
+spec:
+  witness:
+    type: cloudflare-kv
+    cloudflareKV:
+      workerUrl: https://failover-witness.openova.workers.dev
+      secretRef:
+        name: cloudflare-credentials
+    leaseTimeout: 30s
+    renewInterval: 10s
+
+  region: eu1
+  priority: 1
+
+  mode: automatic  # automatic | semi-automatic | manual
+```
+
+## Failure Scenario Matrix
+
+| Scenario | R1 FC | R2 FC | Witness | Result |
+|----------|-------|-------|---------|--------|
+| Normal operation | Renews, ACTIVE | Queries, STANDBY | Accessible | Traffic to R1 |
+| R1 crashes | Dead | Acquires after 30s | Accessible | Failover to R2 |
+| R1 network down | Can't renew | Acquires after 30s | Accessible | Failover to R2 |
+| R1↔R2 partition | Renews, ACTIVE | Queries, STANDBY | Accessible | **No split-brain** |
+| Witness down | Keeps ACTIVE | Keeps STANDBY | Inaccessible | No change (safe) |
+| R1 + witness down | Dead | Can't acquire | Inaccessible | **Manual intervention** |
 
 ## Monitoring
 
@@ -244,60 +288,60 @@ One or more witnesses temporarily unavailable
 
 | Metric | Description |
 |--------|-------------|
-| `splitbrain_witness_reachable` | Witness reachability (0/1) per resolver |
-| `splitbrain_witness_latency_seconds` | Query latency per resolver |
-| `splitbrain_other_region_status` | Other region status per witness (0/1) |
-| `splitbrain_quorum_reached` | Whether quorum was reached (0/1) |
-| `splitbrain_checks_total` | Total split-brain checks |
-| `splitbrain_promotions_total` | Total promotions triggered |
+| `failover_lease_holder` | Current lease holder region (label) |
+| `failover_lease_ttl_seconds` | Time until lease expires |
+| `failover_witness_reachable` | Witness reachability (0/1) |
+| `failover_controller_state` | Current state (0=standby, 1=active, 2=failing_over) |
 
 ### Alerts
 
 | Alert | Condition | Severity |
 |-------|-----------|----------|
-| SplitBrainWitnessUnreachable | witness_reachable == 0 for > 5m | Warning |
-| SplitBrainAllWitnessesUnreachable | All witnesses unreachable | Critical |
-| SplitBrainQuorumDegraded | Only 1 witness responding | Warning |
+| FailoverWitnessUnreachable | witness_reachable == 0 for > 5m | Critical |
+| FailoverLeaseExpiringSoon | lease_ttl < 10s AND state == active | Warning |
+| FailoverBothRegionsStandby | Both regions in STANDBY state | Critical |
+| FailoverBothRegionsActive | Both regions in ACTIVE state | Critical |
 
 ### Grafana Dashboard
 
 ```promql
+# Current active region
+failover_controller_state{state="active"}
+
+# Lease TTL
+failover_lease_ttl_seconds
+
 # Witness health
-sum(splitbrain_witness_reachable) by (resolver)
-
-# Other region status as seen by witnesses
-sum(splitbrain_other_region_status) by (resolver)
-
-# Promotion decisions
-rate(splitbrain_promotions_total[5m])
+failover_witness_reachable
 ```
 
 ## Comparison with Alternatives
 
-| Approach | Pros | Cons | Selected |
-|----------|------|------|----------|
-| **External DNS Witnesses** | Simple, reliable, free | Depends on public DNS | ✅ |
-| Cloudflare Worker | More control | Cost, complexity | ❌ |
-| Dedicated witness servers | Full control | Cost, maintenance | ❌ |
-| Raft consensus | Proven | Requires odd # of regions | ❌ |
+| Approach | Split-brain Safe | Automatic | Cost | Complexity |
+|----------|-----------------|-----------|------|------------|
+| **Cloudflare Witness** | Yes | Yes | Free tier | Low |
+| External DNS resolvers | Partial | Yes | Free | Low |
+| Dedicated witness servers | Yes | Yes | $$$ | High |
+| 3-region quorum | Yes | Yes | $$$ | High |
+| Manual runbook | Yes | No | Free | Low |
 
 ## Limitations
 
-1. **DNS Propagation**: Witnesses check DNS, so detection depends on k8gb updating records
-2. **Anycast Routing**: Witnesses may route through different paths than user traffic
-3. **Partial Failures**: May not detect partial failures within a region
-4. **Witness Reliability**: Depends on public DNS resolvers being available
+1. **Cloudflare dependency**: Both regions must reach Cloudflare (mitigated by Cloudflare's 99.99% SLA)
+2. **Minimum 30s failover time**: Lease TTL determines minimum time to detect failure
+3. **Cannot handle witness + primary down**: Requires manual intervention
 
 ## Best Practices
 
-1. **Never promote without witness confirmation**
-2. **Log all witness responses** for post-incident analysis
-3. **Monitor witness health** independently
-4. **Test failover regularly** in non-production
-5. **Have manual override** for edge cases
+1. **Test failover regularly**: Run DR tests monthly using FailoverCommand
+2. **Monitor witness health**: Alert if witness unreachable
+3. **Log all lease operations**: Audit trail for compliance
+4. **Use semi-automatic for critical workloads**: Require human approval
+5. **Implement fencing at data layer**: CNPG fencing as defense-in-depth
 
 ## Related
 
 - [ADR-FAILOVER-CONTROLLER](../../failover-controller/docs/ADR-FAILOVER-CONTROLLER.md)
 - [ADR-K8GB-GSLB](../../k8gb/docs/ADR-K8GB-GSLB.md)
 - [SPEC-DNS-FAILOVER](./SPEC-DNS-FAILOVER.md)
+- [ADR-MULTI-REGION-STRATEGY](../adrs/ADR-MULTI-REGION-STRATEGY.md)

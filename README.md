@@ -46,7 +46,7 @@ Each infrastructure component has documentation in its own repository:
 | External Secrets | [external-secrets](https://github.com/openova-io/external-secrets) | `docs/` |
 | CNPG | [cnpg](https://github.com/openova-io/cnpg) | `docs/` |
 | MongoDB | [mongodb](https://github.com/openova-io/mongodb) | `docs/` |
-| Dragonfly | [dragonfly](https://github.com/openova-io/dragonfly) | `docs/` |
+| Valkey | [valkey](https://github.com/openova-io/valkey) | `docs/` |
 | Redpanda | [redpanda](https://github.com/openova-io/redpanda) | `docs/` |
 | Kyverno | [kyverno](https://github.com/openova-io/kyverno) | `docs/` |
 | KEDA | [keda](https://github.com/openova-io/keda) | `docs/` |
