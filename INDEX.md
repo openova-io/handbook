@@ -2,7 +2,7 @@
 
 Central index of all documentation across OpenOva repositories.
 
-**Updated:** 2026-01-17
+**Updated:** 2026-01-18
 
 ---
 
@@ -56,7 +56,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 |----------|-------------|
 | [SPEC-PLATFORM-TECH-STACK](./docs/specs/SPEC-PLATFORM-TECH-STACK.md) | Complete platform technology stack |
 | [SPEC-DNS-FAILOVER](./docs/specs/SPEC-DNS-FAILOVER.md) | k8gb + ExternalDNS configuration |
-| [SPEC-SPLIT-BRAIN-PROTECTION](./docs/specs/SPEC-SPLIT-BRAIN-PROTECTION.md) | External DNS witness design |
+| [SPEC-SPLIT-BRAIN-PROTECTION](./docs/specs/SPEC-SPLIT-BRAIN-PROTECTION.md) | Cloud witness (Cloudflare KV) design |
 | [SPEC-LLM-GATEWAY](./docs/specs/SPEC-LLM-GATEWAY.md) | LLM Gateway specification |
 | [SPEC-CIRCUIT-BREAKER](./docs/specs/SPEC-CIRCUIT-BREAKER.md) | Cilium circuit breaker patterns |
 | [SPEC-AUTO-REMEDIATION](./docs/specs/SPEC-AUTO-REMEDIATION.md) | Auto-remediation workflows |
