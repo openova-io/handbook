@@ -55,8 +55,6 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Description |
 |----------|-------------|
 | [SPEC-PLATFORM-TECH-STACK](./docs/specs/SPEC-PLATFORM-TECH-STACK.md) | Complete platform technology stack |
-| [SPEC-DNS-FAILOVER](./docs/specs/SPEC-DNS-FAILOVER.md) | k8gb + ExternalDNS configuration |
-| [SPEC-SPLIT-BRAIN-PROTECTION](./docs/specs/SPEC-SPLIT-BRAIN-PROTECTION.md) | Cloud witness (Cloudflare KV) design |
 | [SPEC-LLM-GATEWAY](./docs/specs/SPEC-LLM-GATEWAY.md) | LLM Gateway specification |
 | [SPEC-CIRCUIT-BREAKER](./docs/specs/SPEC-CIRCUIT-BREAKER.md) | Cilium circuit breaker patterns |
 | [SPEC-AUTO-REMEDIATION](./docs/specs/SPEC-AUTO-REMEDIATION.md) | Auto-remediation workflows |
@@ -68,7 +66,6 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 |----------|-------------|
 | [BLUEPRINT-NAMESPACE](./docs/blueprints/BLUEPRINT-NAMESPACE.md) | Namespace configuration |
 | [BLUEPRINT-DEPLOYMENT](./docs/blueprints/BLUEPRINT-DEPLOYMENT.md) | Deployment templates |
-| [BLUEPRINT-DNS-FAILOVER](./docs/blueprints/BLUEPRINT-DNS-FAILOVER.md) | DNS failover setup |
 | [BLUEPRINT-LLM-GATEWAY](./docs/blueprints/BLUEPRINT-LLM-GATEWAY.md) | LLM Gateway deployment |
 | [BLUEPRINT-OPEN-BANKING](./docs/blueprints/BLUEPRINT-OPEN-BANKING.md) | Open Banking sandbox |
 
@@ -77,7 +74,6 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Description |
 |----------|-------------|
 | [RUNBOOK-PLATFORM](./docs/runbooks/RUNBOOK-PLATFORM.md) | Platform operations |
-| [RUNBOOK-DNS-FAILOVER](./docs/runbooks/RUNBOOK-DNS-FAILOVER.md) | DNS failover procedures |
 
 ---
 
@@ -136,6 +132,8 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Type | Description |
 |----------|------|-------------|
 | [ADR-K8GB-GSLB](https://github.com/openova-io/k8gb/blob/main/docs/ADR-K8GB-GSLB.md) | ADR | Global Server Load Balancing |
+| [BLUEPRINT-K8GB](https://github.com/openova-io/k8gb/blob/main/docs/BLUEPRINT-K8GB.md) | BLUEPRINT | k8gb deployment manifests |
+| [RUNBOOK-K8GB](https://github.com/openova-io/k8gb/blob/main/docs/RUNBOOK-K8GB.md) | RUNBOOK | k8gb operations |
 
 #### ExternalDNS
 **Repository:** [external-dns](https://github.com/openova-io/external-dns)
@@ -161,8 +159,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 **Repository:** [grafana](https://github.com/openova-io/grafana)
 | Document | Type | Description |
 |----------|------|-------------|
-| [ADR-OBSERVABILITY-STACK](https://github.com/openova-io/grafana/blob/main/docs/ADR-OBSERVABILITY-STACK.md) | ADR | Grafana LGTM stack |
-| [SPEC-OBSERVABILITY-STACK](https://github.com/openova-io/grafana/blob/main/docs/SPEC-OBSERVABILITY-STACK.md) | SPEC | Observability configuration |
+| [ADR-OBSERVABILITY-STACK](https://github.com/openova-io/grafana/blob/main/docs/ADR-OBSERVABILITY-STACK.md) | ADR | Grafana LGTM stack (includes configuration) |
 
 ---
 
