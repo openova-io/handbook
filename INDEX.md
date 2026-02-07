@@ -88,12 +88,9 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 #### Terraform
 **Repository:** [terraform](https://github.com/openova-io/terraform)
-| Document | Type | Description |
-|----------|------|-------------|
-| [README](https://github.com/openova-io/terraform/blob/main/README.md) | README | Overview and usage |
-| [ADR-INFRASTRUCTURE](https://github.com/openova-io/terraform/blob/main/docs/ADR-INFRASTRUCTURE.md) | ADR | Infrastructure provisioning (bootstrap only) |
-| [SPEC-INFRASTRUCTURE-SETUP](https://github.com/openova-io/terraform/blob/main/docs/SPEC-INFRASTRUCTURE-SETUP.md) | SPEC | Infrastructure setup specification |
-| [SPEC-CLOUD-COST-COMPARISON](https://github.com/openova-io/terraform/blob/main/docs/SPEC-CLOUD-COST-COMPARISON.md) | SPEC | Cloud provider cost comparison |
+| Document | Description |
+|----------|-------------|
+| [README](https://github.com/openova-io/terraform/blob/main/README.md) | Complete terraform documentation (providers, cost comparison, configuration) |
 
 #### Crossplane
 **Repository:** [crossplane](https://github.com/openova-io/crossplane)
@@ -132,18 +129,15 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 #### Cilium
 **Repository:** [cilium](https://github.com/openova-io/cilium)
-| Document | Type | Description |
-|----------|------|-------------|
-| [ADR-CNI-CILIUM-EBPF](https://github.com/openova-io/cilium/blob/main/docs/ADR-CNI-CILIUM-EBPF.md) | ADR | Cilium CNI with eBPF |
-| [ADR-CILIUM-SERVICE-MESH](https://github.com/openova-io/cilium/blob/main/docs/ADR-CILIUM-SERVICE-MESH.md) | ADR | Cilium Service Mesh (replaces Istio) |
+| Document | Description |
+|----------|-------------|
+| [README](https://github.com/openova-io/cilium/blob/main/README.md) | Complete Cilium documentation (CNI, service mesh, Gateway API, policies) |
 
 #### k8gb
 **Repository:** [k8gb](https://github.com/openova-io/k8gb)
-| Document | Type | Description |
-|----------|------|-------------|
-| [ADR-K8GB-GSLB](https://github.com/openova-io/k8gb/blob/main/docs/ADR-K8GB-GSLB.md) | ADR | Global Server Load Balancing |
-| [BLUEPRINT-K8GB](https://github.com/openova-io/k8gb/blob/main/docs/BLUEPRINT-K8GB.md) | BLUEPRINT | k8gb deployment manifests |
-| [RUNBOOK-K8GB](https://github.com/openova-io/k8gb/blob/main/docs/RUNBOOK-K8GB.md) | RUNBOOK | k8gb operations |
+| Document | Description |
+|----------|-------------|
+| [README](https://github.com/openova-io/k8gb/blob/main/README.md) | Complete k8gb documentation (GSLB, deployment, operations, split-brain protection) |
 
 #### ExternalDNS
 **Repository:** [external-dns](https://github.com/openova-io/external-dns)
@@ -177,10 +171,9 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 #### External Secrets
 **Repository:** [external-secrets](https://github.com/openova-io/external-secrets)
-| Document | Type | Description |
-|----------|------|-------------|
-| [ADR-SECRETS-MANAGEMENT](https://github.com/openova-io/external-secrets/blob/main/docs/ADR-SECRETS-MANAGEMENT.md) | ADR | ESO + Vault (PushSecrets) |
-| [SPEC-SECRETS-CONFIGURATION](https://github.com/openova-io/external-secrets/blob/main/docs/SPEC-SECRETS-CONFIGURATION.md) | SPEC | Secrets configuration specification |
+| Document | Description |
+|----------|-------------|
+| [README](https://github.com/openova-io/external-secrets/blob/main/README.md) | Complete ESO documentation (PushSecrets, generators, configuration) |
 
 #### Vault
 **Repository:** [vault](https://github.com/openova-io/vault)
@@ -218,10 +211,9 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 #### Velero
 **Repository:** [velero](https://github.com/openova-io/velero)
-| Document | Type | Description |
-|----------|------|-------------|
-| [ADR-BACKUP](https://github.com/openova-io/velero/blob/main/docs/ADR-BACKUP.md) | ADR | Backup to archival S3 |
-| [ADR-BACKUP-CLOUDFLARE-R2](https://github.com/openova-io/velero/blob/main/docs/ADR-BACKUP-CLOUDFLARE-R2.md) | ADR | Backup with Cloudflare R2 |
+| Document | Description |
+|----------|-------------|
+| [README](https://github.com/openova-io/velero/blob/main/README.md) | Complete Velero documentation (backup strategies, storage backends, restore) |
 
 ---
 
