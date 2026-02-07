@@ -24,9 +24,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 
 | Document | Description |
 |----------|-------------|
-| [README](https://github.com/openova-io/bootstrap/blob/main/README.md) | Overview and usage |
-| [ADR-BOOTSTRAP-ARCHITECTURE](https://github.com/openova-io/bootstrap/blob/main/docs/ADR-BOOTSTRAP-ARCHITECTURE.md) | Blueprint vs instance architecture |
-| [SPEC-WIZARD-FLOW](https://github.com/openova-io/bootstrap/blob/main/docs/SPEC-WIZARD-FLOW.md) | Interactive wizard specification |
+| [README](https://github.com/openova-io/bootstrap/blob/main/README.md) | Complete bootstrap documentation (architecture, wizard flow, configuration) |
 
 ---
 
