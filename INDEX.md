@@ -2,7 +2,7 @@
 
 Central index of all documentation across OpenOva repositories.
 
-**Updated:** 2026-01-27
+**Updated:** 2026-02-07
 
 ---
 
@@ -68,12 +68,19 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | [BLUEPRINT-DEPLOYMENT](./docs/blueprints/BLUEPRINT-DEPLOYMENT.md) | Deployment templates |
 | [BLUEPRINT-LLM-GATEWAY](./docs/blueprints/BLUEPRINT-LLM-GATEWAY.md) | LLM Gateway deployment |
 | [BLUEPRINT-OPEN-BANKING](./docs/blueprints/BLUEPRINT-OPEN-BANKING.md) | Open Banking sandbox |
+| [BLUEPRINT-DESTINATION-RULE](./docs/blueprints/BLUEPRINT-DESTINATION-RULE.md) | Cilium destination rules |
 
 ### Runbooks (Operational Procedures)
 
 | Document | Description |
 |----------|-------------|
 | [RUNBOOK-PLATFORM](./docs/runbooks/RUNBOOK-PLATFORM.md) | Platform operations |
+
+### Strategy Documents
+
+| Document | Description |
+|----------|-------------|
+| [STRATEGY-HUAWEI-NATIONAL-CLOUD-PARTNERSHIP](./docs/strategy/STRATEGY-HUAWEI-NATIONAL-CLOUD-PARTNERSHIP.md) | Huawei National Cloud partnership strategy |
 
 ---
 
@@ -85,7 +92,10 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 **Repository:** [terraform](https://github.com/openova-io/terraform)
 | Document | Type | Description |
 |----------|------|-------------|
+| [README](https://github.com/openova-io/terraform/blob/main/README.md) | README | Overview and usage |
 | [ADR-INFRASTRUCTURE](https://github.com/openova-io/terraform/blob/main/docs/ADR-INFRASTRUCTURE.md) | ADR | Infrastructure provisioning (bootstrap only) |
+| [SPEC-INFRASTRUCTURE-SETUP](https://github.com/openova-io/terraform/blob/main/docs/SPEC-INFRASTRUCTURE-SETUP.md) | SPEC | Infrastructure setup specification |
+| [SPEC-CLOUD-COST-COMPARISON](https://github.com/openova-io/terraform/blob/main/docs/SPEC-CLOUD-COST-COMPARISON.md) | SPEC | Cloud provider cost comparison |
 
 #### Crossplane
 **Repository:** [crossplane](https://github.com/openova-io/crossplane)
@@ -101,7 +111,9 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 **Repository:** [flux](https://github.com/openova-io/flux)
 | Document | Type | Description |
 |----------|------|-------------|
+| [README](https://github.com/openova-io/flux/blob/main/README.md) | README | Overview and usage |
 | [ADR-FLUX-GITOPS](https://github.com/openova-io/flux/blob/main/docs/ADR-FLUX-GITOPS.md) | ADR | Flux GitOps decision |
+| [ADR-GITOPS-RELEASE-MANAGEMENT](https://github.com/openova-io/flux/blob/main/docs/ADR-GITOPS-RELEASE-MANAGEMENT.md) | ADR | GitOps release management strategy |
 | [SPEC-FLUX-STRUCTURE](https://github.com/openova-io/flux/blob/main/docs/SPEC-FLUX-STRUCTURE.md) | SPEC | Flux directory structure |
 
 #### Gitea
@@ -170,6 +182,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Type | Description |
 |----------|------|-------------|
 | [ADR-SECRETS-MANAGEMENT](https://github.com/openova-io/external-secrets/blob/main/docs/ADR-SECRETS-MANAGEMENT.md) | ADR | ESO + Vault (PushSecrets) |
+| [SPEC-SECRETS-CONFIGURATION](https://github.com/openova-io/external-secrets/blob/main/docs/SPEC-SECRETS-CONFIGURATION.md) | SPEC | Secrets configuration specification |
 
 #### Vault
 **Repository:** [vault](https://github.com/openova-io/vault)
@@ -210,6 +223,7 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Type | Description |
 |----------|------|-------------|
 | [ADR-BACKUP](https://github.com/openova-io/velero/blob/main/docs/ADR-BACKUP.md) | ADR | Backup to archival S3 |
+| [ADR-BACKUP-CLOUDFLARE-R2](https://github.com/openova-io/velero/blob/main/docs/ADR-BACKUP-CLOUDFLARE-R2.md) | ADR | Backup with Cloudflare R2 |
 
 ---
 
@@ -248,6 +262,12 @@ Managed UI for bootstrapping organization-specific Kubernetes infrastructure fro
 | Document | Type | Description |
 |----------|------|-------------|
 | [ADR-CACHING-VALKEY](https://github.com/openova-io/valkey/blob/main/docs/ADR-CACHING-VALKEY.md) | ADR | Redis-compatible cache (BSD-3, REPLICAOF DR) |
+
+#### Dragonfly
+**Repository:** [dragonfly](https://github.com/openova-io/dragonfly)
+| Document | Type | Description |
+|----------|------|-------------|
+| [ADR-CACHING-DRAGONFLY](https://github.com/openova-io/dragonfly/blob/main/docs/ADR-CACHING-DRAGONFLY.md) | ADR | Redis-compatible cache (REPLICAOF DR) |
 
 #### Redpanda
 **Repository:** [redpanda](https://github.com/openova-io/redpanda)
@@ -361,6 +381,7 @@ Bundles: Keycloak + OpenMeter + Lago + custom services for PSD2/FAPI compliance.
 | Data | MongoDB | Document database |
 | Data | Redpanda | Event streaming |
 | Data | Valkey | Cache |
+| Data | Dragonfly | Redis-compatible cache |
 | Communication | Stalwart | Email |
 | Communication | STUNner | WebRTC |
 | Identity | Keycloak | OIDC/OAuth/FAPI Authorization Server |
