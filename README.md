@@ -1,59 +1,19 @@
-# OpenOva Handbook
+# Deprecated
 
-Central documentation hub for the OpenOva kubernetes platform.
+This repository has been retired. Documentation has moved to the organization's `.github` repository.
 
-## Documentation Structure
+**New Location:** https://github.com/openova-io/.github
 
-All documentation is organized in the `docs/` directory:
+---
 
-```
-handbook/docs/
-├── adrs/           # Architecture Decision Records (WHY)
-├── specs/          # Technical Specifications (HOW it works)
-├── blueprints/     # Deployable Configurations (WHAT to deploy)
-├── runbooks/       # Operational Procedures (HOW to operate)
-└── README.md       # Documentation index
-```
+## Documentation Index
 
-## Quick Links
-
-- **[Documentation Index](./docs/README.md)** - Start here
-
-### Key Documents
-
-- [Platform Tech Stack](./docs/specs/SPEC-PLATFORM-TECH-STACK.md)
-- [DNS Failover](./docs/specs/SPEC-DNS-FAILOVER.md)
-- [Platform Runbook](./docs/runbooks/RUNBOOK-PLATFORM.md)
-
-### Key ADRs
-
-- [ADR: Microservices Architecture](./docs/adrs/ADR-MICROSERVICES-ARCHITECTURE.md)
-- [ADR: Zero Human Intervention Ops](./docs/adrs/ADR-ZERO-HUMAN-INTERVENTION-OPS.md)
-- [ADR: Repository Structure](./docs/adrs/ADR-REPOSITORY-STRUCTURE.md)
-
-## Component Documentation
-
-Each infrastructure component has documentation in its own repository:
-
-| Component | Repository | Documentation |
-|-----------|------------|---------------|
-| Terraform | [terraform](https://github.com/openova-io/terraform) | `docs/` |
-| Flux | [flux](https://github.com/openova-io/flux) | `docs/` |
-| Cilium | [cilium](https://github.com/openova-io/cilium) | `docs/` |
-| Gitea | [gitea](https://github.com/openova-io/gitea) | `docs/` |
-| k8gb | [k8gb](https://github.com/openova-io/k8gb) | `docs/` |
-| Grafana | [grafana](https://github.com/openova-io/grafana) | `docs/` |
-| External Secrets | [external-secrets](https://github.com/openova-io/external-secrets) | `docs/` |
-| CNPG | [cnpg](https://github.com/openova-io/cnpg) | `docs/` |
-| MongoDB | [mongodb](https://github.com/openova-io/mongodb) | `docs/` |
-| Valkey | [valkey](https://github.com/openova-io/valkey) | `docs/` |
-| Redpanda | [redpanda](https://github.com/openova-io/redpanda) | `docs/` |
-| Kyverno | [kyverno](https://github.com/openova-io/kyverno) | `docs/` |
-| KEDA | [keda](https://github.com/openova-io/keda) | `docs/` |
-| Velero | [velero](https://github.com/openova-io/velero) | `docs/` |
-| cert-manager | [cert-manager](https://github.com/openova-io/cert-manager) | `docs/` |
-| MinIO | [minio](https://github.com/openova-io/minio) | `docs/` |
-| Stalwart | [stalwart](https://github.com/openova-io/stalwart) | `docs/` |
+| Document | New Location |
+|----------|--------------|
+| Platform Tech Stack | [.github/PLATFORM-TECH-STACK.md](https://github.com/openova-io/.github/blob/main/PLATFORM-TECH-STACK.md) |
+| Repository Structure | [.github/REPOSITORY-STRUCTURE.md](https://github.com/openova-io/.github/blob/main/REPOSITORY-STRUCTURE.md) |
+| SRE Handbook | [.github/SRE.md](https://github.com/openova-io/.github/blob/main/SRE.md) |
+| Organization Overview | [.github/profile/README.md](https://github.com/openova-io/.github/blob/main/profile/README.md) |
 
 ---
 
